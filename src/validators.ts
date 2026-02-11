@@ -115,3 +115,13 @@ export function validateArchiveListRequest(args: Record<string, unknown>): { lis
     listId: validateString(args.listId, 'listId'),
   };
 }
+
+export function validateSearchRequest(args: Record<string, unknown>): { query: string; limit?: number } {
+  if (!args.query) {
+    throw new McpError(ErrorCode.InvalidParams, 'query is required');
+  }
+  return {
+    query: validateString(args.query, 'query'),
+    limit: validateOptionalNumber(args.limit),
+  };
+}

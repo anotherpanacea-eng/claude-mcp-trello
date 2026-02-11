@@ -9,6 +9,7 @@ export interface TrelloCard {
   name: string;
   desc: string;
   due: string | null;
+  idBoard: string;
   idList: string;
   idLabels: string[];
   closed: boolean;

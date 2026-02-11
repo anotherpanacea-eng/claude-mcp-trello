@@ -8,23 +8,21 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 
-// --------------------------------------------------
-// Imports related to TrelloClient (provided classes and types)
-// --------------------------------------------------
-import { TrelloClient } from "./trello-client.js";  // ←Change the path according to your own configuration
+import { TrelloClient } from "./trello-client.js";
 import {
-  TrelloConfig,
-  TrelloCard,
-  TrelloList,
-  TrelloAction,
-} from "./types.js"; // ←Change the path according to your own configuration
+  validateGetCardsListRequest,
+  validateGetRecentActivityRequest,
+  validateAddCardRequest,
+  validateUpdateCardRequest,
+  validateArchiveCardRequest,
+  validateAddListRequest,
+  validateArchiveListRequest,
+  validateSearchRequest,
+} from "./validators.js";
 
 // --------------------------------------------------
 // Define tools for Trello (Tool)
 // --------------------------------------------------
-interface GetCardsByListArgs {
-  listId: string;
-}
 
 const trelloGetCardsByListTool: Tool = {
   name: "trello_get_cards_by_list",
@@ -41,8 +39,6 @@ const trelloGetCardsByListTool: Tool = {
   },
 };
 
-interface GetListsArgs {}
-
 const trelloGetListsTool: Tool = {
   name: "trello_get_lists",
   description: "Retrieves all lists in the board.",
@@ -51,10 +47,6 @@ const trelloGetListsTool: Tool = {
     properties: {},
   },
 };
-
-interface GetRecentActivityArgs {
-  limit?: number;
-}
 
 const trelloGetRecentActivityTool: Tool = {
   name: "trello_get_recent_activity",
@@ -70,14 +62,6 @@ const trelloGetRecentActivityTool: Tool = {
     },
   },
 };
-
-interface AddCardArgs {
-  listId: string;
-  name: string;
-  description?: string;
-  dueDate?: string;
-  labels?: string[];
-}
 
 const trelloAddCardTool: Tool = {
   name: "trello_add_card",
@@ -105,14 +89,6 @@ const trelloAddCardTool: Tool = {
     required: ["listId", "name"],
   },
 };
-
-interface UpdateCardArgs {
-  cardId: string;
-  name?: string;
-  description?: string;
-  dueDate?: string;
-  labels?: string[];
-}
 
 const trelloUpdateCardTool: Tool = {
   name: "trello_update_card",
@@ -147,10 +123,6 @@ const trelloUpdateCardTool: Tool = {
   },
 };
 
-interface ArchiveCardArgs {
-  cardId: string;
-}
-
 const trelloArchiveCardTool: Tool = {
   name: "trello_archive_card",
   description: "Archives (closes) the specified card.",
@@ -165,10 +137,6 @@ const trelloArchiveCardTool: Tool = {
     required: ["cardId"],
   },
 };
-
-interface AddListArgs {
-  name: string;
-}
 
 const trelloAddListTool: Tool = {
   name: "trello_add_list",
@@ -185,10 +153,6 @@ const trelloAddListTool: Tool = {
   },
 };
 
-interface ArchiveListArgs {
-  listId: string;
-}
-
 const trelloArchiveListTool: Tool = {
   name: "trello_archive_list",
   description: "Archives (closes) the specified list.",
@@ -204,26 +168,19 @@ const trelloArchiveListTool: Tool = {
   },
 };
 
-interface GetMyCardsArgs {}
-
 const trelloGetMyCardsTool: Tool = {
   name: "trello_get_my_cards",
-  description: "Retrieves all cards related to your account.",
+  description: "Retrieves cards assigned to you on the configured board.",
   inputSchema: {
     type: "object",
     properties: {},
   },
 };
 
-interface TrelloSearchAllBoardsArgs {
-  query: string;
-  limit?: number;
-}
-
-const trelloSearchAllBoardsTool: Tool = {
-  name: "trello_search_all_boards",
+const trelloSearchBoardTool: Tool = {
+  name: "trello_search_board",
   description:
-    "Performs a cross-board search across all boards in the workspace (organization) (depending on plan/permissions).",
+    "Searches for cards and other items within the configured board.",
   inputSchema: {
     type: "object",
     properties: {
@@ -276,135 +233,86 @@ async function main() {
   // Handle CallToolRequest
   // --------------------------------------------------
   server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
-    console.error("Received CallToolRequest:", request);
+    console.error("Received CallToolRequest:", request.params.name);
     try {
-      if (!request.params.arguments) {
-        throw new Error("No arguments provided");
-      }
+      const args = (request.params.arguments ?? {}) as Record<string, unknown>;
 
       switch (request.params.name) {
-        // --------------------------------------------------
-        // Retrieve the list of cards by specifying the listId
-        // --------------------------------------------------
         case "trello_get_cards_by_list": {
-          const args = request.params.arguments as unknown as GetCardsByListArgs;
-          if (!args.listId) {
-            throw new Error("Missing required argument: listId");
-          }
-          const response = await trelloClient.getCardsByList(args.listId);
+          const validated = validateGetCardsListRequest(args);
+          const response = await trelloClient.getCardsByList(validated.listId);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Retrieve all lists in the board
-        // --------------------------------------------------
         case "trello_get_lists": {
-          // No arguments
           const response = await trelloClient.getLists();
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Recent activity on the board
-        // --------------------------------------------------
         case "trello_get_recent_activity": {
-          const args = request.params.arguments as unknown as GetRecentActivityArgs;
-          const limit = args.limit ?? 10; // Default 10
-          const response = await trelloClient.getRecentActivity(limit);
+          const validated = validateGetRecentActivityRequest(args);
+          const response = await trelloClient.getRecentActivity(validated.limit);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Create a new card
-        // --------------------------------------------------
         case "trello_add_card": {
-          const args = request.params.arguments as unknown as AddCardArgs;
-          if (!args.listId || !args.name) {
-            throw new Error("Missing required arguments: listId, name");
-          }
+          const validated = validateAddCardRequest(args);
           const response = await trelloClient.addCard({
-            listId: args.listId,
-            name: args.name,
-            description: args.description,
-            dueDate: args.dueDate,
-            labels: args.labels,
+            listId: validated.listId,
+            name: validated.name,
+            description: validated.description,
+            dueDate: validated.dueDate,
+            labels: validated.labels,
           });
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Update card
-        // --------------------------------------------------
         case "trello_update_card": {
-          const args = request.params.arguments as unknown as UpdateCardArgs;
-          if (!args.cardId) {
-            throw new Error("Missing required argument: cardId");
-          }
+          const validated = validateUpdateCardRequest(args);
           const response = await trelloClient.updateCard({
-            cardId: args.cardId,
-            name: args.name,
-            description: args.description,
-            dueDate: args.dueDate,
-            labels: args.labels,
+            cardId: validated.cardId,
+            name: validated.name,
+            description: validated.description,
+            dueDate: validated.dueDate,
+            labels: validated.labels,
           });
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Archive card
-        // --------------------------------------------------
         case "trello_archive_card": {
-          const args = request.params.arguments as unknown as ArchiveCardArgs;
-          if (!args.cardId) {
-            throw new Error("Missing required argument: cardId");
-          }
-          const response = await trelloClient.archiveCard(args.cardId);
+          const validated = validateArchiveCardRequest(args);
+          const response = await trelloClient.archiveCard(validated.cardId);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Create a new list
-        // --------------------------------------------------
         case "trello_add_list": {
-          const args = request.params.arguments as unknown as AddListArgs;
-          if (!args.name) {
-            throw new Error("Missing required argument: name");
-          }
-          const response = await trelloClient.addList(args.name);
+          const validated = validateAddListRequest(args);
+          const response = await trelloClient.addList(validated.name);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Archive list
-        // --------------------------------------------------
         case "trello_archive_list": {
-          const args = request.params.arguments as unknown as ArchiveListArgs;
-          if (!args.listId) {
-            throw new Error("Missing required argument: listId");
-          }
-          const response = await trelloClient.archiveList(args.listId);
+          const validated = validateArchiveListRequest(args);
+          const response = await trelloClient.archiveList(validated.listId);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
         }
 
-        // --------------------------------------------------
-        // Retrieve all cards related to yourself
-        // --------------------------------------------------
         case "trello_get_my_cards": {
           const response = await trelloClient.getMyCards();
           return {
@@ -412,10 +320,9 @@ async function main() {
           };
         }
 
-        case "trello_search_all_boards": {
-          const args = request.params.arguments as unknown as TrelloSearchAllBoardsArgs;
-          const limit = args.limit ?? 10;
-          const response = await trelloClient.searchAllBoards(args.query, limit);
+        case "trello_search_board": {
+          const validated = validateSearchRequest(args);
+          const response = await trelloClient.searchBoard(validated.query, validated.limit);
           return {
             content: [{ type: "text", text: JSON.stringify(response) }],
           };
@@ -425,7 +332,7 @@ async function main() {
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
     } catch (error) {
-      console.error("Error executing tool:", error);
+      console.error("Error executing tool:", error instanceof Error ? error.message : String(error));
       return {
         content: [
           {
@@ -455,7 +362,7 @@ async function main() {
         trelloAddListTool,
         trelloArchiveListTool,
         trelloGetMyCardsTool,
-        trelloSearchAllBoardsTool,
+        trelloSearchBoardTool,
       ],
     };
   });
@@ -471,6 +378,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  console.error("Fatal error in main():", error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
