@@ -18,14 +18,32 @@ import {
   validateGetRecentActivityRequest,
   validateObject,
   validateSearchBoardRequest,
+  validateTrelloId,
   validateUpdateCardRequest,
 } from './validators.js';
 
 const DEFAULT_ACTIVITY_LIMIT = 10;
 const DEFAULT_SEARCH_LIMIT = 10;
 
+const WRITE_TOOLS = new Set([
+  'trello_add_card',
+  'trello_update_card',
+  'trello_archive_card',
+  'trello_add_list',
+  'trello_archive_list',
+]);
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function auditLog(toolName: string, args: Record<string, unknown>): void {
+  const idFields: Record<string, unknown> = {};
+  for (const key of ['listId', 'cardId', 'boardId']) {
+    if (args[key] !== undefined) idFields[key] = args[key];
+  }
+  const idSummary = Object.keys(idFields).length > 0 ? ` ${JSON.stringify(idFields)}` : '';
+  console.error(`[audit] ${new Date().toISOString()} ${toolName}${idSummary}`);
 }
 
 // --------------------------------------------------
@@ -212,7 +230,16 @@ async function main() {
     process.exit(1);
   }
 
-  console.error('Starting Trello MCP Server...');
+  try {
+    validateTrelloId(trelloBoardId, 'TRELLO_BOARD_ID');
+  } catch {
+    console.error('TRELLO_BOARD_ID must be a valid 24-character hex Trello ID.');
+    process.exit(1);
+  }
+
+  const readOnly = process.env.TRELLO_READ_ONLY === 'true';
+
+  console.error(`Starting Trello MCP Server...${readOnly ? ' (read-only mode)' : ''}`);
 
   // Initialize MCP Server
   const server = new Server(
@@ -240,6 +267,23 @@ async function main() {
   server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
     try {
       const args = validateObject(request.params.arguments, 'arguments');
+      const toolName = request.params.name;
+
+      auditLog(toolName, args);
+
+      if (readOnly && WRITE_TOOLS.has(toolName)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Tool "${toolName}" is disabled in read-only mode. Set TRELLO_READ_ONLY=false to enable write operations.`,
+              }),
+            },
+          ],
+        };
+      }
 
       switch (request.params.name) {
         // --------------------------------------------------
@@ -373,19 +417,21 @@ async function main() {
   // Handle ListToolsRequest (return the list of registered tools)
   // --------------------------------------------------
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const allTools = [
+      trelloGetCardsByListTool,
+      trelloGetListsTool,
+      trelloGetRecentActivityTool,
+      trelloAddCardTool,
+      trelloUpdateCardTool,
+      trelloArchiveCardTool,
+      trelloAddListTool,
+      trelloArchiveListTool,
+      trelloGetMyCardsTool,
+      trelloSearchAllBoardsTool,
+    ];
+
     return {
-      tools: [
-        trelloGetCardsByListTool,
-        trelloGetListsTool,
-        trelloGetRecentActivityTool,
-        trelloAddCardTool,
-        trelloUpdateCardTool,
-        trelloArchiveCardTool,
-        trelloAddListTool,
-        trelloArchiveListTool,
-        trelloGetMyCardsTool,
-        trelloSearchAllBoardsTool,
-      ],
+      tools: readOnly ? allTools.filter(t => !WRITE_TOOLS.has(t.name)) : allTools,
     };
   });
 

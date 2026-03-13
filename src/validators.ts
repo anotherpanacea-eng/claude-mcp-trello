@@ -2,6 +2,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 const MAX_ACTIVITY_LIMIT = 100;
 const MAX_SEARCH_LIMIT = 25;
+const TRELLO_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 
 export function validateObject(value: unknown, field: string): Record<string, unknown> {
   if (value === undefined) {
@@ -62,6 +63,31 @@ export function validateOptionalPositiveInteger(
   return parsed;
 }
 
+export function validateTrelloId(value: unknown, field: string): string {
+  const id = validateNonEmptyString(value, field);
+  if (!TRELLO_ID_PATTERN.test(id)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `${field} must be a valid Trello ID (24-character hex string)`
+    );
+  }
+  return id;
+}
+
+export function validateOptionalTrelloIdArray(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  const arr = validateStringArray(value);
+  for (const item of arr) {
+    if (!TRELLO_ID_PATTERN.test(item)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Each label ID must be a valid Trello ID (24-character hex string)`
+      );
+    }
+  }
+  return arr;
+}
+
 export function validateStringArray(value: unknown): string[] {
   if (!Array.isArray(value) || !value.every(item => typeof item === 'string')) {
     throw new McpError(ErrorCode.InvalidParams, 'Value must be an array of strings');
@@ -79,7 +105,7 @@ export function validateGetCardsListRequest(args: Record<string, unknown>): { li
     throw new McpError(ErrorCode.InvalidParams, 'listId is required');
   }
   return {
-    listId: validateNonEmptyString(args.listId, 'listId'),
+    listId: validateTrelloId(args.listId, 'listId'),
   };
 }
 
@@ -102,11 +128,11 @@ export function validateAddCardRequest(args: Record<string, unknown>): {
     throw new McpError(ErrorCode.InvalidParams, 'listId and name are required');
   }
   return {
-    listId: validateNonEmptyString(args.listId, 'listId'),
+    listId: validateTrelloId(args.listId, 'listId'),
     name: validateNonEmptyString(args.name, 'name'),
     description: validateOptionalString(args.description),
     dueDate: validateOptionalString(args.dueDate),
-    labels: validateOptionalStringArray(args.labels),
+    labels: validateOptionalTrelloIdArray(args.labels),
   };
 }
 
@@ -121,11 +147,11 @@ export function validateUpdateCardRequest(args: Record<string, unknown>): {
     throw new McpError(ErrorCode.InvalidParams, 'cardId is required');
   }
   return {
-    cardId: validateNonEmptyString(args.cardId, 'cardId'),
+    cardId: validateTrelloId(args.cardId, 'cardId'),
     name: validateOptionalString(args.name),
     description: validateOptionalString(args.description),
     dueDate: validateOptionalString(args.dueDate),
-    labels: validateOptionalStringArray(args.labels),
+    labels: validateOptionalTrelloIdArray(args.labels),
   };
 }
 
@@ -134,7 +160,7 @@ export function validateArchiveCardRequest(args: Record<string, unknown>): { car
     throw new McpError(ErrorCode.InvalidParams, 'cardId is required');
   }
   return {
-    cardId: validateNonEmptyString(args.cardId, 'cardId'),
+    cardId: validateTrelloId(args.cardId, 'cardId'),
   };
 }
 
@@ -152,7 +178,7 @@ export function validateArchiveListRequest(args: Record<string, unknown>): { lis
     throw new McpError(ErrorCode.InvalidParams, 'listId is required');
   }
   return {
-    listId: validateNonEmptyString(args.listId, 'listId'),
+    listId: validateTrelloId(args.listId, 'listId'),
   };
 }
 

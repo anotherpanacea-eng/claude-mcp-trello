@@ -20,6 +20,9 @@ export class TrelloClient {
   constructor(private config: TrelloConfig) {
     this.axiosInstance = axios.create({
       baseURL: 'https://api.trello.com/1',
+      timeout: 30000,
+      maxContentLength: 5 * 1024 * 1024, // 5MB response limit
+      maxBodyLength: 1 * 1024 * 1024, // 1MB request limit
       params: {
         key: config.apiKey,
         token: config.token,
