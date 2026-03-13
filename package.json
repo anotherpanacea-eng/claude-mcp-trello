@@ -1,7 +1,7 @@
 {
-  "name": "@modelcontextprotocol/server-trello",
+  "name": "claude-mcp-trello",
   "version": "0.1.0",
-  "description": "A Model Context Protocol (MCP) server for interacting with Trello boards",
+  "description": "A board-scoped Model Context Protocol (MCP) server for interacting with Trello boards",
   "type": "module",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
     "start": "node build/index.js",
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "tsx src/index.ts",
+    "test": "npm run build && node --test test/**/*.test.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build",
@@ -19,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/modelcontextprotocol/server-trello.git"
+    "url": "git+https://github.com/anotherpanacea-eng/claude-mcp-trello.git"
   },
   "keywords": [
     "mcp",
@@ -33,32 +34,34 @@
     "task-management",
     "kanban"
   ],
-  "author": "Model Context Protocol Team",
+  "author": "anotherpanacea-eng",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/modelcontextprotocol/server-trello/issues"
+    "url": "https://github.com/anotherpanacea-eng/claude-mcp-trello/issues"
   },
-  "homepage": "https://github.com/modelcontextprotocol/server-trello#readme",
+  "homepage": "https://github.com/anotherpanacea-eng/claude-mcp-trello#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "axios": "^1.6.2"
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "axios": "^1.13.6"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.12.0",
-    "@typescript-eslint/parser": "^6.12.0",
-    "eslint": "^8.54.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.1",
-    "prettier": "^3.1.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.3.2"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.19.37",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "files": [
     "build/**/*"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "publishConfig": {
     "access": "public"

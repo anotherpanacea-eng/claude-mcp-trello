@@ -5,13 +5,11 @@ export class TokenBucketRateLimiter implements RateLimiter {
   private lastRefill: number;
   private readonly maxTokens: number;
   private readonly refillRate: number; // tokens per millisecond
-  private readonly refillInterval: number; // milliseconds
 
   constructor(maxRequests: number, windowMs: number) {
     this.maxTokens = maxRequests;
     this.tokens = maxRequests;
     this.lastRefill = Date.now();
-    this.refillInterval = windowMs;
     this.refillRate = maxRequests / windowMs;
   }
 
@@ -33,14 +31,14 @@ export class TokenBucketRateLimiter implements RateLimiter {
   }
 
   async waitForAvailableToken(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const check = () => {
         if (this.canMakeRequest()) {
           resolve();
         } else {
           // Calculate time until next token is available
           const tokensNeeded = 1 - this.tokens;
-          const msToWait = (tokensNeeded / this.refillRate) * 1000;
+          const msToWait = Math.max(1, Math.ceil(tokensNeeded / this.refillRate));
           setTimeout(check, Math.min(msToWait, 100)); // Check at most every 100ms
         }
       };

@@ -1,6 +1,6 @@
 # Claude MCP Trello
 
-A Model Context Protocol (MCP) server that provides tools for interacting with Trello boards. This server enables seamless integration with Trello's API while handling rate limiting, type safety, and error handling automatically.
+A Model Context Protocol (MCP) server that provides tools for interacting with a single configured Trello board. This server keeps requests board-scoped by default, limits sensitive logging, and handles rate limiting and validation automatically.
 
 <a href="https://glama.ai/mcp/servers/7vcnchsm63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/7vcnchsm63/badge" alt="Claude Trello MCP server" />
@@ -8,11 +8,11 @@ A Model Context Protocol (MCP) server that provides tools for interacting with T
 
 ## Features
 
-- **Full Trello Board Integration**: Interact with cards, lists, and board activities  
+- **Board-Scoped Operations**: Card and list operations are restricted to the configured `TRELLO_BOARD_ID`  
 - **Built-in Rate Limiting**: Respects Trello's API limits (300 requests/10s per API key, 100 requests/10s per token)  
 - **Type-Safe Implementation**: Written in TypeScript with comprehensive type definitions  
-- **Input Validation**: Robust validation for all API inputs  
-- **Error Handling**: Graceful error handling with informative messages  
+- **Input Validation**: Validates required fields and bounds request limits before calling Trello  
+- **Safer Error Handling**: Avoids logging full request payloads or raw credential-bearing error objects  
 
 ## Available Tools
 
@@ -39,7 +39,7 @@ Retrieves all lists in the board.
 ```
 
 ### `trello_get_recent_activity`
-Retrieves the most recent board activity. The `limit` argument can specify how many to retrieve (default: 10).
+Retrieves the most recent board activity. The `limit` argument can specify how many to retrieve (default: 10, maximum: 100).
 
 ```typescript
 {
@@ -129,14 +129,14 @@ Retrieves all cards related to your account.
 ```
 
 ### `trello_search_all_boards`
-Performs a cross-board search across all boards in the workspace (organization), depending on plan/permissions.
+Searches within the configured board only. The legacy tool name is kept for compatibility.
 
 ```typescript
 {
   name: "trello_search_all_boards",
   arguments: {
     query: string;   // Search keyword
-    limit?: number;  // Optional: max number of results (default: 10)
+    limit?: number;  // Optional: max number of results (default: 10, maximum: 25)
   }
 }
 ```
@@ -156,20 +156,20 @@ The server provides detailed error messages for various scenarios:
 - Rate limit exceeded
 - API authentication errors
 - Network issues
-- Invalid board/list/card IDs
+- Out-of-scope board/list/card IDs
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 16 or higher  
+- Node.js 18 or higher  
 - npm or yarn  
 
 ### Setup
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/hrs-asano/claude-mcp-trello.git
+   git clone https://github.com/anotherpanacea-eng/claude-mcp-trello.git
    cd claude-mcp-trello
    ```
 
@@ -183,10 +183,14 @@ The server provides detailed error messages for various scenarios:
    npm run build
    ```
 
-## Running Tests
-   ```bash
-   npm test
-   ```
+## Verification
+This repository includes a small automated test suite and a CI workflow. A good local verification pass is:
+
+```bash
+npm run lint
+npm run build
+npm test
+```
 
 ## Integration with Claude Desktop
 To integrate this MCP server with Claude Desktop, add the following configuration to your
@@ -210,6 +214,8 @@ To integrate this MCP server with Claude Desktop, add the following configuratio
   ```
 
 Make sure to replace {YOUR_NODE_PATH}, {YOUR_PATH}, {YOUR_KEY}, {YOUR_TOKEN}, and {YOUR_BOARD_ID} with the appropriate values for your environment.
+
+Keep the Trello token narrowly scoped to the board and permissions you actually need. The server will reject card and list operations outside the configured board, but credential scope still matters.
 
 ## Contributing
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.

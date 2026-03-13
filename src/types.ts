@@ -9,6 +9,7 @@ export interface TrelloCard {
   name: string;
   desc: string;
   due: string | null;
+  idBoard?: string;
   idList: string;
   idLabels: string[];
   closed: boolean;
@@ -55,6 +56,17 @@ export interface TrelloLabel {
   id: string;
   name: string;
   color: string;
+}
+
+export interface TrelloBoardSearchResult {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export interface TrelloSearchResults {
+  boards: TrelloBoardSearchResult[];
+  cards: TrelloCard[];
 }
 
 export interface TrelloMember {
