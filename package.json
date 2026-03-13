@@ -12,7 +12,7 @@
     "build": "tsc && chmod +x build/index.js",
     "start": "node build/index.js",
     "dev": "tsx src/index.ts",
-    "test": "npm run build && node --test test/**/*.test.js",
+    "test": "npm run build && node --test test/*.test.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "npm run build",
