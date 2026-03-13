@@ -162,7 +162,7 @@ The server provides detailed error messages for various scenarios:
 
 ### Prerequisites
 
-- Node.js 18 or higher  
+- Node.js 20 or higher  
 - npm or yarn  
 
 ### Setup
