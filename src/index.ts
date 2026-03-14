@@ -365,8 +365,7 @@ const trelloAddCheckItemTool: Tool = {
 
 const trelloUpdateCheckItemTool: Tool = {
   name: 'trello_update_check_item',
-  description:
-    'Updates a checklist item — change its name, or mark it as complete/incomplete.',
+  description: 'Updates a checklist item — change its name, or mark it as complete/incomplete.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -818,10 +817,7 @@ async function main() {
         // --------------------------------------------------
         case 'trello_add_check_item': {
           const parsedArgs = validateAddCheckItemRequest(args);
-          const response = await trelloClient.addCheckItem(
-            parsedArgs.checklistId,
-            parsedArgs.name
-          );
+          const response = await trelloClient.addCheckItem(parsedArgs.checklistId, parsedArgs.name);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -885,10 +881,7 @@ async function main() {
           } else if (parsedArgs.value === undefined) {
             body = { value: '', idValue: '' };
           } else {
-            const valueKey =
-              parsedArgs.type === 'checkbox'
-                ? 'checked'
-                : parsedArgs.type;
+            const valueKey = parsedArgs.type === 'checkbox' ? 'checked' : parsedArgs.type;
             body = { value: { [valueKey]: parsedArgs.value } };
           }
           const response = await trelloClient.setCustomFieldValue(

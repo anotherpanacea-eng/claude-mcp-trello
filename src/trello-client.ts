@@ -327,17 +327,13 @@ export class TrelloClient {
 
   async deleteCheckItem(checklistId: string, checkItemId: string): Promise<void> {
     return this.handleRequest(async () => {
-      await this.axiosInstance.delete(
-        `/checklists/${checklistId}/checkItems/${checkItemId}`
-      );
+      await this.axiosInstance.delete(`/checklists/${checklistId}/checkItems/${checkItemId}`);
     });
   }
 
   async getCustomFields(): Promise<TrelloCustomField[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(
-        `/boards/${this.config.boardId}/customFields`
-      );
+      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/customFields`);
       return response.data;
     });
   }
@@ -345,10 +341,9 @@ export class TrelloClient {
   async getCustomFieldItems(cardId: string): Promise<TrelloCustomFieldItem[]> {
     return this.handleRequest(async () => {
       await this.assertCardInConfiguredBoard(cardId);
-      const response = await this.axiosInstance.get<TrelloCard & { customFieldItems: TrelloCustomFieldItem[] }>(
-        `/cards/${cardId}`,
-        { params: { customFieldItems: true, fields: 'id' } }
-      );
+      const response = await this.axiosInstance.get<
+        TrelloCard & { customFieldItems: TrelloCustomFieldItem[] }
+      >(`/cards/${cardId}`, { params: { customFieldItems: true, fields: 'id' } });
       return response.data.customFieldItems ?? [];
     });
   }
