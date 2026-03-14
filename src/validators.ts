@@ -182,6 +182,65 @@ export function validateArchiveListRequest(args: Record<string, unknown>): { lis
   };
 }
 
+const VALID_LABEL_COLORS = new Set([
+  'green',
+  'yellow',
+  'orange',
+  'red',
+  'purple',
+  'blue',
+  'sky',
+  'lime',
+  'pink',
+  'black',
+]);
+
+export function validateMoveCardRequest(args: Record<string, unknown>): {
+  cardId: string;
+  listId: string;
+} {
+  if (!args.cardId || !args.listId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and listId are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    listId: validateTrelloId(args.listId, 'listId'),
+  };
+}
+
+export function validateAddCommentRequest(args: Record<string, unknown>): {
+  cardId: string;
+  text: string;
+} {
+  if (!args.cardId || !args.text) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and text are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    text: validateNonEmptyString(args.text, 'text'),
+  };
+}
+
+export function validateAddLabelRequest(args: Record<string, unknown>): {
+  name: string;
+  color: string;
+} {
+  if (!args.name || !args.color) {
+    throw new McpError(ErrorCode.InvalidParams, 'name and color are required');
+  }
+  const color = validateNonEmptyString(args.color, 'color');
+  if (!VALID_LABEL_COLORS.has(color)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `color must be one of: ${[...VALID_LABEL_COLORS].join(', ')}`
+    );
+  }
+  return {
+    name: validateNonEmptyString(args.name, 'name'),
+    color,
+  };
+}
+
 export function validateSearchBoardRequest(args: Record<string, unknown>): {
   query: string;
   limit?: number;

@@ -11,11 +11,14 @@ import {
 import { TrelloClient } from './trello-client.js';
 import {
   validateAddCardRequest,
+  validateAddCommentRequest,
+  validateAddLabelRequest,
   validateAddListRequest,
   validateArchiveCardRequest,
   validateArchiveListRequest,
   validateGetCardsListRequest,
   validateGetRecentActivityRequest,
+  validateMoveCardRequest,
   validateObject,
   validateSearchBoardRequest,
   validateTrelloId,
@@ -31,6 +34,9 @@ const WRITE_TOOLS = new Set([
   'trello_archive_card',
   'trello_add_list',
   'trello_archive_list',
+  'trello_move_card',
+  'trello_add_comment',
+  'trello_add_label',
 ]);
 
 function getErrorMessage(error: unknown): string {
@@ -217,6 +223,73 @@ const trelloSearchAllBoardsTool: Tool = {
   },
 };
 
+const trelloMoveCardTool: Tool = {
+  name: 'trello_move_card',
+  description: 'Moves a card to a different list.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to move',
+      },
+      listId: {
+        type: 'string',
+        description: 'The ID of the destination list',
+      },
+    },
+    required: ['cardId', 'listId'],
+  },
+};
+
+const trelloAddCommentTool: Tool = {
+  name: 'trello_add_comment',
+  description: 'Adds a comment to a card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to comment on',
+      },
+      text: {
+        type: 'string',
+        description: 'The comment text',
+      },
+    },
+    required: ['cardId', 'text'],
+  },
+};
+
+const trelloGetLabelsTool: Tool = {
+  name: 'trello_get_labels',
+  description: 'Retrieves all labels on the board.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+const trelloAddLabelTool: Tool = {
+  name: 'trello_add_label',
+  description: 'Creates a new label on the board.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'The name of the label',
+      },
+      color: {
+        type: 'string',
+        description:
+          'The color of the label (green, yellow, orange, red, purple, blue, sky, lime, pink, black)',
+      },
+    },
+    required: ['name', 'color'],
+  },
+};
+
 // --------------------------------------------------
 // Main server implementation
 // --------------------------------------------------
@@ -394,6 +467,49 @@ async function main() {
           };
         }
 
+        // --------------------------------------------------
+        // Move card to another list
+        // --------------------------------------------------
+        case 'trello_move_card': {
+          const parsedArgs = validateMoveCardRequest(args);
+          const response = await trelloClient.moveCard(parsedArgs.cardId, parsedArgs.listId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Add comment to card
+        // --------------------------------------------------
+        case 'trello_add_comment': {
+          const parsedArgs = validateAddCommentRequest(args);
+          const response = await trelloClient.addComment(parsedArgs.cardId, parsedArgs.text);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Get all labels on the board
+        // --------------------------------------------------
+        case 'trello_get_labels': {
+          const response = await trelloClient.getLabels();
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Create a new label on the board
+        // --------------------------------------------------
+        case 'trello_add_label': {
+          const parsedArgs = validateAddLabelRequest(args);
+          const response = await trelloClient.addLabel(parsedArgs.name, parsedArgs.color);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -428,6 +544,10 @@ async function main() {
       trelloArchiveListTool,
       trelloGetMyCardsTool,
       trelloSearchAllBoardsTool,
+      trelloMoveCardTool,
+      trelloAddCommentTool,
+      trelloGetLabelsTool,
+      trelloAddLabelTool,
     ];
 
     return {

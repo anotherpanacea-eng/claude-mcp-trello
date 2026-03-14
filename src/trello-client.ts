@@ -3,6 +3,7 @@ import {
   TrelloAction,
   TrelloCard,
   TrelloConfig,
+  TrelloLabel,
   TrelloList,
   TrelloSearchResults,
 } from './types.js';
@@ -232,6 +233,44 @@ export class TrelloClient {
           board_fields: 'id,name,url',
           card_fields: 'id,name,desc,due,idBoard,idList,idLabels,closed,url,dateLastActivity',
         },
+      });
+      return response.data;
+    });
+  }
+
+  async moveCard(cardId: string, listId: string): Promise<TrelloCard> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertListInConfiguredBoard(listId);
+      const response = await this.axiosInstance.put(`/cards/${cardId}`, {
+        idList: listId,
+      });
+      return response.data;
+    });
+  }
+
+  async addComment(cardId: string, text: string): Promise<TrelloAction> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.post(`/cards/${cardId}/actions/comments`, {
+        text,
+      });
+      return response.data;
+    });
+  }
+
+  async getLabels(): Promise<TrelloLabel[]> {
+    return this.handleRequest(async () => {
+      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/labels`);
+      return response.data;
+    });
+  }
+
+  async addLabel(name: string, color: string): Promise<TrelloLabel> {
+    return this.handleRequest(async () => {
+      const response = await this.axiosInstance.post(`/boards/${this.config.boardId}/labels`, {
+        name,
+        color,
       });
       return response.data;
     });
