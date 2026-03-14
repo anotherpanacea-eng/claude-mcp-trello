@@ -6,6 +6,8 @@ import {
   TrelloCheckItem,
   TrelloChecklist,
   TrelloConfig,
+  TrelloCustomField,
+  TrelloCustomFieldItem,
   TrelloLabel,
   TrelloList,
   TrelloSearchResults,
@@ -327,6 +329,42 @@ export class TrelloClient {
       await this.axiosInstance.delete(
         `/checklists/${checklistId}/checkItems/${checkItemId}`
       );
+    });
+  }
+
+  async getCustomFields(): Promise<TrelloCustomField[]> {
+    return this.handleRequest(async () => {
+      const response = await this.axiosInstance.get(
+        `/boards/${this.config.boardId}/customFields`
+      );
+      return response.data;
+    });
+  }
+
+  async getCustomFieldItems(cardId: string): Promise<TrelloCustomFieldItem[]> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.get<TrelloCard & { customFieldItems: TrelloCustomFieldItem[] }>(
+        `/cards/${cardId}`,
+        { params: { customFieldItems: true, fields: 'id' } }
+      );
+      return response.data.customFieldItems ?? [];
+    });
+  }
+
+  async setCustomFieldValue(
+    cardId: string,
+    customFieldId: string,
+    body: Record<string, unknown>
+  ): Promise<TrelloCustomFieldItem> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      // Note: Trello uses singular /card/ (not /cards/) for this endpoint
+      const response = await this.axiosInstance.put(
+        `/card/${cardId}/customField/${customFieldId}/item`,
+        body
+      );
+      return response.data;
     });
   }
 

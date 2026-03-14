@@ -22,6 +22,8 @@ import {
   validateDownloadAttachmentRequest,
   validateGetCardAttachmentsRequest,
   validateGetCardsListRequest,
+  validateGetCustomFieldItemsRequest,
+  validateSetCustomFieldRequest,
   validateGetChecklistsRequest,
   validateGetRecentActivityRequest,
   validateMoveCardRequest,
@@ -48,6 +50,7 @@ const WRITE_TOOLS = new Set([
   'trello_add_check_item',
   'trello_update_check_item',
   'trello_delete_check_item',
+  'trello_set_custom_field',
 ]);
 
 function getErrorMessage(error: unknown): string {
@@ -401,6 +404,64 @@ const trelloDeleteCheckItemTool: Tool = {
   },
 };
 
+const trelloGetCustomFieldsTool: Tool = {
+  name: 'trello_get_custom_fields',
+  description: 'Retrieves all custom field definitions on the board, including dropdown options.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+const trelloGetCustomFieldItemsTool: Tool = {
+  name: 'trello_get_custom_field_items',
+  description:
+    'Retrieves all custom field values set on a card. Use trello_get_custom_fields first to understand the field definitions and types.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to get custom field values from',
+      },
+    },
+    required: ['cardId'],
+  },
+};
+
+const trelloSetCustomFieldTool: Tool = {
+  name: 'trello_set_custom_field',
+  description:
+    'Sets a custom field value on a card. For text/number/date/checkbox fields, provide "value". For list/dropdown fields, provide "idValue" (the option ID from field definitions). To clear a value, omit value/idValue.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card',
+      },
+      customFieldId: {
+        type: 'string',
+        description: 'The ID of the custom field definition',
+      },
+      type: {
+        type: 'string',
+        description: 'The field type: "text", "number", "checkbox", "date", or "list"',
+      },
+      value: {
+        type: 'string',
+        description:
+          'The value to set (for text: string, number: "42", date: ISO 8601, checkbox: "true"/"false"). Omit to clear.',
+      },
+      idValue: {
+        type: 'string',
+        description: 'The option ID for list/dropdown fields. Omit to clear.',
+      },
+    },
+    required: ['cardId', 'customFieldId', 'type'],
+  },
+};
+
 const trelloGetCardAttachmentsTool: Tool = {
   name: 'trello_get_card_attachments',
   description:
@@ -720,6 +781,54 @@ async function main() {
         }
 
         // --------------------------------------------------
+        // Get custom field definitions
+        // --------------------------------------------------
+        case 'trello_get_custom_fields': {
+          const response = await trelloClient.getCustomFields();
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Get custom field values on a card
+        // --------------------------------------------------
+        case 'trello_get_custom_field_items': {
+          const parsedArgs = validateGetCustomFieldItemsRequest(args);
+          const response = await trelloClient.getCustomFieldItems(parsedArgs.cardId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Set a custom field value on a card
+        // --------------------------------------------------
+        case 'trello_set_custom_field': {
+          const parsedArgs = validateSetCustomFieldRequest(args);
+          let body: Record<string, unknown>;
+          if (parsedArgs.type === 'list') {
+            body = { idValue: parsedArgs.idValue ?? '' };
+          } else if (parsedArgs.value === undefined) {
+            body = { value: '', idValue: '' };
+          } else {
+            const valueKey =
+              parsedArgs.type === 'checkbox'
+                ? 'checked'
+                : parsedArgs.type;
+            body = { value: { [valueKey]: parsedArgs.value } };
+          }
+          const response = await trelloClient.setCustomFieldValue(
+            parsedArgs.cardId,
+            parsedArgs.customFieldId,
+            body
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
         // Get all attachments from a card
         // --------------------------------------------------
         case 'trello_get_card_attachments': {
@@ -787,6 +896,9 @@ async function main() {
       trelloAddCheckItemTool,
       trelloUpdateCheckItemTool,
       trelloDeleteCheckItemTool,
+      trelloGetCustomFieldsTool,
+      trelloGetCustomFieldItemsTool,
+      trelloSetCustomFieldTool,
       trelloGetCardAttachmentsTool,
       trelloDownloadAttachmentTool,
     ];

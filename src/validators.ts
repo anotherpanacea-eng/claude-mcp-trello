@@ -312,6 +312,55 @@ export function validateDeleteCheckItemRequest(args: Record<string, unknown>): {
   };
 }
 
+export function validateGetCustomFieldItemsRequest(args: Record<string, unknown>): {
+  cardId: string;
+} {
+  if (!args.cardId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId is required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+  };
+}
+
+const VALID_CUSTOM_FIELD_TYPES = new Set(['text', 'number', 'checkbox', 'date', 'list']);
+
+export function validateSetCustomFieldRequest(args: Record<string, unknown>): {
+  cardId: string;
+  customFieldId: string;
+  type: string;
+  value?: string;
+  idValue?: string;
+} {
+  if (!args.cardId || !args.customFieldId || !args.type) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId, customFieldId, and type are required');
+  }
+  const type = validateNonEmptyString(args.type, 'type');
+  if (!VALID_CUSTOM_FIELD_TYPES.has(type)) {
+    throw new McpError(
+      ErrorCode.InvalidParams,
+      `type must be one of: ${[...VALID_CUSTOM_FIELD_TYPES].join(', ')}`
+    );
+  }
+  if (type === 'list') {
+    if (!args.idValue) {
+      throw new McpError(ErrorCode.InvalidParams, 'idValue is required for list-type fields');
+    }
+    return {
+      cardId: validateTrelloId(args.cardId, 'cardId'),
+      customFieldId: validateTrelloId(args.customFieldId, 'customFieldId'),
+      type,
+      idValue: validateTrelloId(args.idValue, 'idValue'),
+    };
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    customFieldId: validateTrelloId(args.customFieldId, 'customFieldId'),
+    type,
+    value: validateOptionalString(args.value),
+  };
+}
+
 export function validateGetCardAttachmentsRequest(args: Record<string, unknown>): {
   cardId: string;
 } {

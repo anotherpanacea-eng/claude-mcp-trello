@@ -93,6 +93,37 @@ export interface TrelloCheckItem {
   idChecklist: string;
 }
 
+export interface TrelloCustomField {
+  id: string;
+  idModel: string;
+  modelType: string;
+  name: string;
+  type: 'text' | 'number' | 'checkbox' | 'date' | 'list';
+  pos: number;
+  options?: TrelloCustomFieldOption[];
+}
+
+export interface TrelloCustomFieldOption {
+  id: string;
+  value: { text: string };
+  color: string;
+  pos: number;
+}
+
+export interface TrelloCustomFieldItem {
+  id: string;
+  idCustomField: string;
+  idModel: string;
+  modelType: string;
+  idValue?: string;
+  value?: {
+    text?: string;
+    number?: string;
+    date?: string;
+    checked?: string;
+  };
+}
+
 export interface TrelloAttachment {
   id: string;
   name: string;
