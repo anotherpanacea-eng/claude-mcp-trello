@@ -159,6 +159,25 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 | `trello_search_all_boards` | Search cards on the configured board | |
 | `trello_get_recent_activity` | Get recent board activity (up to 100 actions) | |
 
+## API Coverage Decisions
+
+This server covers the Trello API endpoints most useful for day-to-day board work. Several API groups were intentionally excluded:
+
+| API Group | Decision | Reason |
+|-----------|----------|--------|
+| **Board admin** (update settings, delete board, manage power-ups) | Excluded | Destructive and administrative — should require direct Trello access, not AI-mediated actions |
+| **Board invitations** (invite/remove members, manage permissions) | Excluded | Access control changes are high-risk for an automated tool |
+| **Webhooks** (create, delete, manage) | Excluded | Webhook management requires a publicly reachable callback URL; incompatible with local MCP server architecture |
+| **Notifications** (list, mark read, update) | Excluded | User-facing notification management adds no value in an AI workflow |
+| **Tokens/API keys** (view, revoke) | Excluded | Exposing credential management to an AI tool is a security antipattern |
+| **Organizations/Workspaces** | Excluded | Out of scope for a board-scoped server; would require removing the single-board security boundary |
+| **Action reactions** (emoji on comments) | Excluded | Low value relative to tool count inflation |
+| **Action updates** (edit comments) | Excluded | Editing existing comments is rare; add + delete covers the practical cases |
+| **Batch endpoint** (`/batch`) | Excluded | Trello's batch endpoint bypasses per-request validation and board scoping |
+| **Attachment uploads** | Excluded | File uploads via AI introduce content provenance concerns; download-only is the safer boundary |
+
+Contributions that expand coverage thoughtfully are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Security Features
 
 - **Board Scoping**: All card and list operations verify the resource belongs to the configured board before proceeding. Cross-board operations are rejected.
