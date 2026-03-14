@@ -1,0 +1,63 @@
+{
+  "manifest_version": "0.3",
+  "name": "claude-mcp-trello",
+  "display_name": "Trello",
+  "version": "1.0.0",
+  "description": "Board-scoped Trello MCP server with 28 tools for cards, lists, labels, checklists, custom fields, attachments, members, comments, search, and activity. Includes input validation, audit logging, rate limiting, and read-only mode.",
+  "author": {
+    "name": "anotherpanacea-eng",
+    "email": "anotherpanacea@gmail.com",
+    "url": "https://github.com/anotherpanacea-eng"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "build/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/build/index.js"],
+      "env": {
+        "TRELLO_API_KEY": "${user_config.trello_api_key}",
+        "TRELLO_TOKEN": "${user_config.trello_token}",
+        "TRELLO_BOARD_ID": "${user_config.trello_board_id}",
+        "TRELLO_READ_ONLY": "${user_config.trello_read_only}"
+      }
+    }
+  },
+  "user_config": {
+    "trello_api_key": {
+      "type": "string",
+      "title": "Trello API Key",
+      "description": "Your Trello API key from https://trello.com/power-ups/admin",
+      "sensitive": true,
+      "required": true
+    },
+    "trello_token": {
+      "type": "string",
+      "title": "Trello Token",
+      "description": "Your Trello API token (generate from the Power-Up admin page)",
+      "sensitive": true,
+      "required": true
+    },
+    "trello_board_id": {
+      "type": "string",
+      "title": "Trello Board ID",
+      "description": "24-character hex ID of the board to operate on. Get it from the Trello API: https://api.trello.com/1/boards/SHORT_ID?fields=id&key=KEY&token=TOKEN",
+      "required": true
+    },
+    "trello_read_only": {
+      "type": "string",
+      "title": "Read-Only Mode",
+      "description": "Set to 'true' to disable all write operations (optional)",
+      "required": false,
+      "default": "false"
+    }
+  },
+  "tools_generated": true,
+  "privacy_policies": [
+    "https://github.com/anotherpanacea-eng/claude-mcp-trello#privacy-policy"
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32"]
+  }
+}
