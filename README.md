@@ -1,6 +1,6 @@
 # Claude MCP Trello
 
-A Model Context Protocol (MCP) server that provides tools for interacting with a single configured Trello board. Board-scoped by default, with rate limiting, input validation, audit logging, and an optional read-only mode.
+A Model Context Protocol (MCP) server for interacting with Trello boards. It stays locked to a primary board by default, and can be expanded to an explicit allowlist of additional boards when you need multi-board workflows. Includes rate limiting, input validation, audit logging, and an optional read-only mode.
 
 <a href="https://glama.ai/mcp/servers/7vcnchsm63">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/7vcnchsm63/badge" alt="Claude Trello MCP server" />
@@ -41,6 +41,7 @@ claude mcp add trello \
   -e TRELLO_API_KEY=your_key \
   -e TRELLO_TOKEN=your_token \
   -e TRELLO_BOARD_ID=your_board_id \
+  -e TRELLO_ALLOWED_BOARD_IDS=secondary_board_id,third_board_id \
   -- node /absolute/path/to/claude-mcp-trello/build/index.js
 ```
 
@@ -55,7 +56,8 @@ Or add manually to your settings file:
       "env": {
         "TRELLO_API_KEY": "your_key",
         "TRELLO_TOKEN": "your_token",
-        "TRELLO_BOARD_ID": "your_board_id"
+        "TRELLO_BOARD_ID": "your_board_id",
+        "TRELLO_ALLOWED_BOARD_IDS": "secondary_board_id,third_board_id"
       }
     }
   }
@@ -75,14 +77,25 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "env": {
         "TRELLO_API_KEY": "your_key",
         "TRELLO_TOKEN": "your_token",
-        "TRELLO_BOARD_ID": "your_board_id"
+        "TRELLO_BOARD_ID": "your_board_id",
+        "TRELLO_ALLOWED_BOARD_IDS": "secondary_board_id,third_board_id"
       }
     }
   }
 }
 ```
 
-Replace paths and credentials with your actual values. Keep the Trello token narrowly scoped to the board and permissions you actually need.
+Replace paths and credentials with your actual values. `TRELLO_ALLOWED_BOARD_IDS` is optional; omit it if you want strict single-board mode. Keep the Trello token narrowly scoped to the boards and permissions you actually need.
+
+## Allowed-Boards Mode
+
+`TRELLO_BOARD_ID` remains the primary board and default target for board-level tools.
+
+If you also set `TRELLO_ALLOWED_BOARD_IDS`, the server expands its scope to that explicit allowlist:
+
+- Board-level tools such as `trello_get_lists`, `trello_get_recent_activity`, `trello_get_labels`, `trello_get_custom_fields`, and `trello_get_board_members` accept an optional `boardId`.
+- Resource-based tools still validate ownership server-side. A `cardId`, `listId`, or `checklistId` is rejected unless it belongs to one of the allowed boards.
+- `trello_get_allowed_boards` lets Claude inspect the allowed board set before taking action.
 
 ## Environment Variables
 
@@ -90,16 +103,22 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 |----------|----------|-------------|
 | `TRELLO_API_KEY` | Yes | Your Trello API key |
 | `TRELLO_TOKEN` | Yes | Your Trello API token |
-| `TRELLO_BOARD_ID` | Yes | 24-character hex ID of the board to operate on |
+| `TRELLO_BOARD_ID` | Yes | 24-character hex ID of the primary board to operate on |
+| `TRELLO_ALLOWED_BOARD_IDS` | No | Comma-separated list of additional allowed board IDs. The primary board is always allowed. |
 | `TRELLO_READ_ONLY` | No | Set to `true` to disable all write operations |
 
-## Available Tools (28)
+## Available Tools (29)
+
+### Board Scope
+| Tool | Description | Write |
+|------|-------------|-------|
+| `trello_get_allowed_boards` | List the boards this server is allowed to access | |
 
 ### Cards
 | Tool | Description | Write |
 |------|-------------|-------|
 | `trello_get_cards_by_list` | Get all cards in a list | |
-| `trello_get_my_cards` | Get all cards assigned to you on the board | |
+| `trello_get_my_cards` | Get your cards across allowed boards, or on one board if `boardId` is provided | |
 | `trello_add_card` | Create a new card (name, description, due date, labels) | Yes |
 | `trello_update_card` | Update card fields (name, description, due date, labels) | Yes |
 | `trello_archive_card` | Archive (close) a card | Yes |
@@ -108,14 +127,14 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 ### Lists
 | Tool | Description | Write |
 |------|-------------|-------|
-| `trello_get_lists` | Get all lists on the board | |
-| `trello_add_list` | Create a new list | Yes |
+| `trello_get_lists` | Get all lists on a board; defaults to the primary board unless `boardId` is provided | |
+| `trello_add_list` | Create a new list on a board; defaults to the primary board unless `boardId` is provided | Yes |
 | `trello_archive_list` | Archive (close) a list | Yes |
 
 ### Members
 | Tool | Description | Write |
 |------|-------------|-------|
-| `trello_get_board_members` | List all board members (for finding member IDs) | |
+| `trello_get_board_members` | List board members; defaults to the primary board unless `boardId` is provided | |
 | `trello_assign_card_member` | Assign a member to a card | Yes |
 | `trello_unassign_card_member` | Remove a member from a card | Yes |
 
@@ -128,8 +147,8 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 ### Labels
 | Tool | Description | Write |
 |------|-------------|-------|
-| `trello_get_labels` | Get all labels on the board | |
-| `trello_add_label` | Create a new label (name + color) | Yes |
+| `trello_get_labels` | Get all labels on a board; defaults to the primary board unless `boardId` is provided | |
+| `trello_add_label` | Create a new label on a board; defaults to the primary board unless `boardId` is provided | Yes |
 
 ### Checklists
 | Tool | Description | Write |
@@ -143,7 +162,7 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 ### Custom Fields
 | Tool | Description | Write |
 |------|-------------|-------|
-| `trello_get_custom_fields` | Get all custom field definitions on the board | |
+| `trello_get_custom_fields` | Get custom field definitions on a board; defaults to the primary board unless `boardId` is provided | |
 | `trello_get_custom_field_items` | Get custom field values set on a card | |
 | `trello_set_custom_field` | Set a custom field value on a card | Yes |
 
@@ -156,8 +175,8 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 ### Search & Activity
 | Tool | Description | Write |
 |------|-------------|-------|
-| `trello_search_all_boards` | Search cards on the configured board | |
-| `trello_get_recent_activity` | Get recent board activity (up to 100 actions) | |
+| `trello_search_all_boards` | Search across all allowed boards, or a single board if `boardId` is provided | |
+| `trello_get_recent_activity` | Get recent board activity for a board; defaults to the primary board unless `boardId` is provided | |
 
 ## Example Prompts
 
@@ -172,6 +191,8 @@ Once configured, you can use natural language with Claude to interact with your 
 > "Find all cards assigned to me that are overdue, then move any that are still in 'In Progress' to the 'Needs Review' list."
 
 > "Search for cards mentioning 'API migration' and add a comment to each one saying 'Blocked — waiting on vendor response.'"
+
+> "Show me the allowed boards, then get the recent activity on the client-retainer board."
 
 **Custom fields and members:**
 > "Show me the custom field values on the 'Q2 Planning' card, then set the Priority field to 'High' and assign it to Sarah."
@@ -197,7 +218,7 @@ Contributions that expand coverage thoughtfully are welcome — see [CONTRIBUTIN
 
 ## Security Features
 
-- **Board Scoping**: All card and list operations verify the resource belongs to the configured board before proceeding. Cross-board operations are rejected.
+- **Allowed-Board Scoping**: All card, list, and checklist operations verify the resource belongs to the primary board or an explicitly allowed additional board before proceeding. Everything else is rejected.
 - **ID Validation**: All Trello IDs are validated as 24-character hex strings before hitting the API, preventing path traversal or injection.
 - **Read-Only Mode**: Set `TRELLO_READ_ONLY=true` to hide and block all write tools. Write attempts return a clear error.
 - **Audit Logging**: Every tool invocation is logged to stderr with timestamp, tool name, and relevant IDs (no content or credentials).
@@ -212,7 +233,7 @@ This MCP server operates entirely on your local machine. It does not collect, st
 - **Data flow**: All data flows directly between this server and Trello's API. No intermediary servers are involved.
 - **Audit logs**: Tool invocations are logged to stderr (your local terminal) with tool names, timestamps, and Trello resource IDs. No card content, comments, or credentials appear in logs.
 - **No telemetry**: This server includes no analytics, crash reporting, or usage tracking of any kind.
-- **Board scoping**: The server is restricted to a single configured board. It cannot access other boards, workspaces, or Trello accounts beyond what the provided API token permits.
+- **Board scoping**: The server is restricted to the primary configured board plus any extra board IDs you explicitly allow. It cannot roam across the rest of your Trello workspace automatically.
 
 For Trello's own data handling, see [Atlassian's Privacy Policy](https://www.atlassian.com/legal/privacy-policy).
 

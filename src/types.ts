@@ -2,6 +2,7 @@ export interface TrelloConfig {
   apiKey: string;
   token: string;
   boardId: string;
+  allowedBoardIds?: string[];
 }
 
 export interface TrelloCard {
@@ -59,6 +60,12 @@ export interface TrelloLabel {
 }
 
 export interface TrelloBoardSearchResult {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export interface TrelloBoardSummary {
   id: string;
   name: string;
   url: string;

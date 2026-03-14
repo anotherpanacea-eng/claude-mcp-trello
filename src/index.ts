@@ -25,11 +25,13 @@ import {
   validateGetCardAttachmentsRequest,
   validateGetCardsListRequest,
   validateGetCustomFieldItemsRequest,
+  validateGetMyCardsRequest,
   validateSetCustomFieldRequest,
   validateGetChecklistsRequest,
   validateGetRecentActivityRequest,
   validateMoveCardRequest,
   validateObject,
+  validateOptionalBoardTargetRequest,
   validateSearchBoardRequest,
   validateTrelloId,
   validateUnassignCardMemberRequest,
@@ -65,11 +67,48 @@ function getErrorMessage(error: unknown): string {
 
 function auditLog(toolName: string, args: Record<string, unknown>): void {
   const idFields: Record<string, unknown> = {};
-  for (const key of ['listId', 'cardId', 'boardId', 'memberId', 'actionId']) {
+  for (const key of [
+    'listId',
+    'cardId',
+    'boardId',
+    'checklistId',
+    'memberId',
+    'actionId',
+    'customFieldId',
+    'attachmentId',
+  ]) {
     if (args[key] !== undefined) idFields[key] = args[key];
   }
   const idSummary = Object.keys(idFields).length > 0 ? ` ${JSON.stringify(idFields)}` : '';
   console.error(`[audit] ${new Date().toISOString()} ${toolName}${idSummary}`);
+}
+
+const optionalBoardIdProperty = {
+  boardId: {
+    type: 'string',
+    description:
+      'Optional board ID. Omit to use the primary configured board. Must be one of the allowed boards when multi-board mode is enabled.',
+  },
+} as const;
+
+function parseAllowedBoardIds(primaryBoardId: string, rawValue: string | undefined): string[] {
+  const allowedBoardIds = new Set([primaryBoardId]);
+
+  if (!rawValue) {
+    return [...allowedBoardIds];
+  }
+
+  for (const candidate of rawValue.split(',')) {
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    validateTrelloId(trimmed, 'TRELLO_ALLOWED_BOARD_IDS');
+    allowedBoardIds.add(trimmed);
+  }
+
+  return [...allowedBoardIds];
 }
 
 // --------------------------------------------------
@@ -97,12 +136,32 @@ const trelloGetCardsByListTool: Tool = {
   },
 };
 
-const trelloGetListsTool: Tool = {
-  name: 'trello_get_lists',
-  description: 'Retrieves all lists in the board.',
+const trelloGetAllowedBoardsTool: Tool = {
+  name: 'trello_get_allowed_boards',
+  description:
+    'Lists the boards this MCP server is allowed to access. Use this first in allowed-boards mode to choose a board ID for board-level tools.',
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    title: 'Get Allowed Boards',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
+};
+
+const trelloGetListsTool: Tool = {
+  name: 'trello_get_lists',
+  description:
+    'Retrieves all lists in a board. Defaults to the primary configured board unless boardId is provided.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      ...optionalBoardIdProperty,
+    },
   },
   annotations: {
     title: 'Get Board Lists',
@@ -116,10 +175,11 @@ const trelloGetListsTool: Tool = {
 const trelloGetRecentActivityTool: Tool = {
   name: 'trello_get_recent_activity',
   description:
-    "Retrieves the most recent board activity. The 'limit' argument can specify how many to retrieve.",
+    "Retrieves recent activity for a board. Defaults to the primary configured board unless boardId is provided. The 'limit' argument can specify how many to retrieve.",
   inputSchema: {
     type: 'object',
     properties: {
+      ...optionalBoardIdProperty,
       limit: {
         type: 'number',
         description: 'Number of activities to retrieve (default: 10)',
@@ -231,10 +291,12 @@ const trelloArchiveCardTool: Tool = {
 
 const trelloAddListTool: Tool = {
   name: 'trello_add_list',
-  description: 'Adds a new list to the board.',
+  description:
+    'Adds a new list to a board. Defaults to the primary configured board unless boardId is provided.',
   inputSchema: {
     type: 'object',
     properties: {
+      ...optionalBoardIdProperty,
       name: {
         type: 'string',
         description: 'Name of the list',
@@ -275,10 +337,13 @@ const trelloArchiveListTool: Tool = {
 
 const trelloGetMyCardsTool: Tool = {
   name: 'trello_get_my_cards',
-  description: 'Retrieves all cards related to your account.',
+  description:
+    'Retrieves cards related to your account within the allowed board scope. Provide boardId to limit results to a single board.',
   inputSchema: {
     type: 'object',
-    properties: {},
+    properties: {
+      ...optionalBoardIdProperty,
+    },
   },
   annotations: {
     title: 'Get My Cards',
@@ -292,10 +357,11 @@ const trelloGetMyCardsTool: Tool = {
 const trelloSearchAllBoardsTool: Tool = {
   name: 'trello_search_all_boards',
   description:
-    'Searches within the configured board only. The legacy tool name is kept for compatibility.',
+    'Searches within the allowed board scope. Provide boardId to search a single board, or omit it to search all allowed boards.',
   inputSchema: {
     type: 'object',
     properties: {
+      ...optionalBoardIdProperty,
       query: { type: 'string', description: 'Search keyword' },
       limit: {
         type: 'number',
@@ -367,10 +433,13 @@ const trelloAddCommentTool: Tool = {
 
 const trelloGetLabelsTool: Tool = {
   name: 'trello_get_labels',
-  description: 'Retrieves all labels on the board.',
+  description:
+    'Retrieves all labels on a board. Defaults to the primary configured board unless boardId is provided.',
   inputSchema: {
     type: 'object',
-    properties: {},
+    properties: {
+      ...optionalBoardIdProperty,
+    },
   },
   annotations: {
     title: 'Get Labels',
@@ -383,10 +452,12 @@ const trelloGetLabelsTool: Tool = {
 
 const trelloAddLabelTool: Tool = {
   name: 'trello_add_label',
-  description: 'Creates a new label on the board.',
+  description:
+    'Creates a new label on a board. Defaults to the primary configured board unless boardId is provided.',
   inputSchema: {
     type: 'object',
     properties: {
+      ...optionalBoardIdProperty,
       name: {
         type: 'string',
         description: 'The name of the label',
@@ -544,10 +615,13 @@ const trelloDeleteCheckItemTool: Tool = {
 
 const trelloGetCustomFieldsTool: Tool = {
   name: 'trello_get_custom_fields',
-  description: 'Retrieves all custom field definitions on the board, including dropdown options.',
+  description:
+    'Retrieves all custom field definitions on a board, including dropdown options. Defaults to the primary configured board unless boardId is provided.',
   inputSchema: {
     type: 'object',
-    properties: {},
+    properties: {
+      ...optionalBoardIdProperty,
+    },
   },
   annotations: {
     title: 'Get Custom Fields',
@@ -673,10 +747,13 @@ const trelloDownloadAttachmentTool: Tool = {
 
 const trelloGetBoardMembersTool: Tool = {
   name: 'trello_get_board_members',
-  description: 'Retrieves all members of the board. Use to find member IDs for card assignment.',
+  description:
+    'Retrieves all members of a board. Use to find member IDs for card assignment. Defaults to the primary configured board unless boardId is provided.',
   inputSchema: {
     type: 'object',
-    properties: {},
+    properties: {
+      ...optionalBoardIdProperty,
+    },
   },
   annotations: {
     title: 'Get Board Members',
@@ -773,6 +850,7 @@ async function main() {
   const trelloApiKey = process.env.TRELLO_API_KEY;
   const trelloToken = process.env.TRELLO_TOKEN;
   const trelloBoardId = process.env.TRELLO_BOARD_ID;
+  const trelloAllowedBoardIdsRaw = process.env.TRELLO_ALLOWED_BOARD_IDS;
 
   if (!trelloApiKey || !trelloToken || !trelloBoardId) {
     console.error('TRELLO_API_KEY / TRELLO_TOKEN / TRELLO_BOARD_ID are not set.');
@@ -786,9 +864,22 @@ async function main() {
     process.exit(1);
   }
 
-  const readOnly = process.env.TRELLO_READ_ONLY === 'true';
+  let allowedBoardIds: string[];
+  try {
+    allowedBoardIds = parseAllowedBoardIds(trelloBoardId, trelloAllowedBoardIdsRaw);
+  } catch {
+    console.error(
+      'TRELLO_ALLOWED_BOARD_IDS must be a comma-separated list of valid 24-character hex Trello IDs.'
+    );
+    process.exit(1);
+  }
 
-  console.error(`Starting Trello MCP Server...${readOnly ? ' (read-only mode)' : ''}`);
+  const readOnly = process.env.TRELLO_READ_ONLY === 'true';
+  const multiBoardMode = allowedBoardIds.length > 1;
+
+  console.error(
+    `Starting Trello MCP Server...${readOnly ? ' (read-only mode)' : ''}${multiBoardMode ? ` (${allowedBoardIds.length} allowed boards)` : ''}`
+  );
 
   // Initialize MCP Server
   const server = new Server(
@@ -808,6 +899,7 @@ async function main() {
     apiKey: trelloApiKey,
     token: trelloToken,
     boardId: trelloBoardId,
+    allowedBoardIds,
   });
 
   // --------------------------------------------------
@@ -835,6 +927,13 @@ async function main() {
       }
 
       switch (request.params.name) {
+        case 'trello_get_allowed_boards': {
+          const response = await trelloClient.getAllowedBoards();
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
         // --------------------------------------------------
         // Retrieve the list of cards by specifying the listId
         // --------------------------------------------------
@@ -850,8 +949,8 @@ async function main() {
         // Retrieve all lists in the board
         // --------------------------------------------------
         case 'trello_get_lists': {
-          // No arguments
-          const response = await trelloClient.getLists();
+          const parsedArgs = validateOptionalBoardTargetRequest(args);
+          const response = await trelloClient.getLists(parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -863,7 +962,7 @@ async function main() {
         case 'trello_get_recent_activity': {
           const parsedArgs = validateGetRecentActivityRequest(args);
           const limit = parsedArgs.limit ?? DEFAULT_ACTIVITY_LIMIT;
-          const response = await trelloClient.getRecentActivity(limit);
+          const response = await trelloClient.getRecentActivity(limit, parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -907,7 +1006,7 @@ async function main() {
         // --------------------------------------------------
         case 'trello_add_list': {
           const parsedArgs = validateAddListRequest(args);
-          const response = await trelloClient.addList(parsedArgs.name);
+          const response = await trelloClient.addList(parsedArgs.name, parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -928,7 +1027,8 @@ async function main() {
         // Retrieve all cards related to yourself
         // --------------------------------------------------
         case 'trello_get_my_cards': {
-          const response = await trelloClient.getMyCards();
+          const parsedArgs = validateGetMyCardsRequest(args);
+          const response = await trelloClient.getMyCards(parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -937,7 +1037,11 @@ async function main() {
         case 'trello_search_all_boards': {
           const parsedArgs = validateSearchBoardRequest(args);
           const limit = parsedArgs.limit ?? DEFAULT_SEARCH_LIMIT;
-          const response = await trelloClient.searchAllBoards(parsedArgs.query, limit);
+          const response = await trelloClient.searchAllBoards(
+            parsedArgs.query,
+            limit,
+            parsedArgs.boardId
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -969,7 +1073,8 @@ async function main() {
         // Get all labels on the board
         // --------------------------------------------------
         case 'trello_get_labels': {
-          const response = await trelloClient.getLabels();
+          const parsedArgs = validateOptionalBoardTargetRequest(args);
+          const response = await trelloClient.getLabels(parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -980,7 +1085,11 @@ async function main() {
         // --------------------------------------------------
         case 'trello_add_label': {
           const parsedArgs = validateAddLabelRequest(args);
-          const response = await trelloClient.addLabel(parsedArgs.name, parsedArgs.color);
+          const response = await trelloClient.addLabel(
+            parsedArgs.name,
+            parsedArgs.color,
+            parsedArgs.boardId
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -1049,7 +1158,8 @@ async function main() {
         // Get custom field definitions
         // --------------------------------------------------
         case 'trello_get_custom_fields': {
-          const response = await trelloClient.getCustomFields();
+          const parsedArgs = validateOptionalBoardTargetRequest(args);
+          const response = await trelloClient.getCustomFields(parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -1119,7 +1229,8 @@ async function main() {
         // Get board members
         // --------------------------------------------------
         case 'trello_get_board_members': {
-          const response = await trelloClient.getBoardMembers();
+          const parsedArgs = validateOptionalBoardTargetRequest(args);
+          const response = await trelloClient.getBoardMembers(parsedArgs.boardId);
           return {
             content: [{ type: 'text', text: JSON.stringify(response) }],
           };
@@ -1185,6 +1296,7 @@ async function main() {
   // --------------------------------------------------
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const allTools = [
+      trelloGetAllowedBoardsTool,
       trelloGetCardsByListTool,
       trelloGetListsTool,
       trelloGetRecentActivityTool,

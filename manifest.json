@@ -3,7 +3,7 @@
   "name": "claude-mcp-trello",
   "display_name": "Trello",
   "version": "1.0.0",
-  "description": "Board-scoped Trello MCP server with 28 tools for cards, lists, labels, checklists, custom fields, attachments, members, comments, search, and activity. Includes input validation, audit logging, rate limiting, and read-only mode.",
+  "description": "Board-scoped Trello MCP server with 29 tools for cards, lists, labels, checklists, custom fields, attachments, members, comments, search, and activity. Single-board by default, with optional allowed-boards mode, input validation, audit logging, rate limiting, and read-only mode.",
   "author": {
     "name": "anotherpanacea-eng",
     "email": "anotherpanacea@gmail.com",
@@ -20,6 +20,7 @@
         "TRELLO_API_KEY": "${user_config.trello_api_key}",
         "TRELLO_TOKEN": "${user_config.trello_token}",
         "TRELLO_BOARD_ID": "${user_config.trello_board_id}",
+        "TRELLO_ALLOWED_BOARD_IDS": "${user_config.trello_allowed_board_ids}",
         "TRELLO_READ_ONLY": "${user_config.trello_read_only}"
       }
     }
@@ -41,9 +42,15 @@
     },
     "trello_board_id": {
       "type": "string",
-      "title": "Trello Board ID",
-      "description": "24-character hex ID of the board to operate on. Get it from the Trello API: https://api.trello.com/1/boards/SHORT_ID?fields=id&key=KEY&token=TOKEN",
+      "title": "Primary Trello Board ID",
+      "description": "24-character hex ID of the default board to operate on. Get it from the Trello API: https://api.trello.com/1/boards/SHORT_ID?fields=id&key=KEY&token=TOKEN",
       "required": true
+    },
+    "trello_allowed_board_ids": {
+      "type": "string",
+      "title": "Additional Allowed Board IDs",
+      "description": "Optional comma-separated list of extra Trello board IDs the server may access. The primary board is always included automatically.",
+      "required": false
     },
     "trello_read_only": {
       "type": "string",

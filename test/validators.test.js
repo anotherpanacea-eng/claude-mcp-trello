@@ -6,8 +6,10 @@ import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import {
   validateAddCardRequest,
   validateGetRecentActivityRequest,
+  validateGetMyCardsRequest,
   validateObject,
   validateSearchBoardRequest,
+  validateSetCustomFieldRequest,
 } from '../build/validators.js';
 
 test('validateObject rejects non-object arguments', () => {
@@ -28,7 +30,10 @@ test('validateAddCardRequest trims required strings', () => {
 });
 
 test('validateGetRecentActivityRequest enforces bounds', () => {
-  assert.deepEqual(validateGetRecentActivityRequest({ limit: 25 }), { limit: 25 });
+  assert.deepEqual(validateGetRecentActivityRequest({ limit: 25 }), {
+    boardId: undefined,
+    limit: 25,
+  });
 
   assert.throws(
     () => validateGetRecentActivityRequest({ limit: 0 }),
@@ -43,6 +48,7 @@ test('validateGetRecentActivityRequest enforces bounds', () => {
 
 test('validateSearchBoardRequest enforces a bounded positive limit', () => {
   assert.deepEqual(validateSearchBoardRequest({ query: 'alpha', limit: 25 }), {
+    boardId: undefined,
     query: 'alpha',
     limit: 25,
   });
@@ -50,5 +56,28 @@ test('validateSearchBoardRequest enforces a bounded positive limit', () => {
   assert.throws(
     () => validateSearchBoardRequest({ query: 'alpha', limit: 26 }),
     error => error.code === ErrorCode.InvalidParams
+  );
+});
+
+test('validateGetMyCardsRequest accepts an optional boardId', () => {
+  assert.deepEqual(validateGetMyCardsRequest({}), { boardId: undefined });
+  assert.deepEqual(validateGetMyCardsRequest({ boardId: '507f1f77bcf86cd799439011' }), {
+    boardId: '507f1f77bcf86cd799439011',
+  });
+});
+
+test('validateSetCustomFieldRequest allows clearing list fields', () => {
+  assert.deepEqual(
+    validateSetCustomFieldRequest({
+      cardId: '507f1f77bcf86cd799439011',
+      customFieldId: '507f1f77bcf86cd799439012',
+      type: 'list',
+    }),
+    {
+      cardId: '507f1f77bcf86cd799439011',
+      customFieldId: '507f1f77bcf86cd799439012',
+      type: 'list',
+      idValue: undefined,
+    }
   );
 });

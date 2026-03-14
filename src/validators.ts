@@ -74,6 +74,11 @@ export function validateTrelloId(value: unknown, field: string): string {
   return id;
 }
 
+export function validateOptionalTrelloId(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  return validateTrelloId(value, field);
+}
+
 export function validateOptionalTrelloIdArray(value: unknown): string[] | undefined {
   if (value === undefined) return undefined;
   const arr = validateStringArray(value);
@@ -110,9 +115,11 @@ export function validateGetCardsListRequest(args: Record<string, unknown>): { li
 }
 
 export function validateGetRecentActivityRequest(args: Record<string, unknown>): {
+  boardId?: string;
   limit?: number;
 } {
   return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
     limit: validateOptionalPositiveInteger(args.limit, 'limit', MAX_ACTIVITY_LIMIT),
   };
 }
@@ -164,11 +171,15 @@ export function validateArchiveCardRequest(args: Record<string, unknown>): { car
   };
 }
 
-export function validateAddListRequest(args: Record<string, unknown>): { name: string } {
+export function validateAddListRequest(args: Record<string, unknown>): {
+  boardId?: string;
+  name: string;
+} {
   if (!args.name) {
     throw new McpError(ErrorCode.InvalidParams, 'name is required');
   }
   return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
     name: validateNonEmptyString(args.name, 'name'),
   };
 }
@@ -222,6 +233,7 @@ export function validateAddCommentRequest(args: Record<string, unknown>): {
 }
 
 export function validateAddLabelRequest(args: Record<string, unknown>): {
+  boardId?: string;
   name: string;
   color: string;
 } {
@@ -236,8 +248,17 @@ export function validateAddLabelRequest(args: Record<string, unknown>): {
     );
   }
   return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
     name: validateNonEmptyString(args.name, 'name'),
     color,
+  };
+}
+
+export function validateOptionalBoardTargetRequest(args: Record<string, unknown>): {
+  boardId?: string;
+} {
+  return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
   };
 }
 
@@ -343,14 +364,11 @@ export function validateSetCustomFieldRequest(args: Record<string, unknown>): {
     );
   }
   if (type === 'list') {
-    if (!args.idValue) {
-      throw new McpError(ErrorCode.InvalidParams, 'idValue is required for list-type fields');
-    }
     return {
       cardId: validateTrelloId(args.cardId, 'cardId'),
       customFieldId: validateTrelloId(args.customFieldId, 'customFieldId'),
       type,
-      idValue: validateTrelloId(args.idValue, 'idValue'),
+      idValue: validateOptionalTrelloId(args.idValue, 'idValue'),
     };
   }
   return {
@@ -386,6 +404,7 @@ export function validateDownloadAttachmentRequest(args: Record<string, unknown>)
 }
 
 export function validateSearchBoardRequest(args: Record<string, unknown>): {
+  boardId?: string;
   query: string;
   limit?: number;
 } {
@@ -394,8 +413,17 @@ export function validateSearchBoardRequest(args: Record<string, unknown>): {
   }
 
   return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
     query: validateNonEmptyString(args.query, 'query'),
     limit: validateOptionalPositiveInteger(args.limit, 'limit', MAX_SEARCH_LIMIT),
+  };
+}
+
+export function validateGetMyCardsRequest(args: Record<string, unknown>): {
+  boardId?: string;
+} {
+  return {
+    boardId: validateOptionalTrelloId(args.boardId, 'boardId'),
   };
 }
 

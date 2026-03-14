@@ -22,6 +22,9 @@ export function createFakeAxios(overrides = {}) {
     put: async () => {
       throw new Error('Unexpected PUT request');
     },
+    delete: async () => {
+      throw new Error('Unexpected DELETE request');
+    },
     ...overrides,
   };
 }

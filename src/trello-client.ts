@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import {
   TrelloAction,
   TrelloAttachment,
+  TrelloBoardSummary,
   TrelloCard,
   TrelloCheckItem,
   TrelloChecklist,
@@ -17,19 +18,25 @@ import { createTrelloRateLimiters } from './rate-limiter.js';
 
 const MAX_429_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 1000;
+const CARD_FIELDS = 'id,name,desc,due,idBoard,idList,idLabels,closed,url,dateLastActivity';
+const BOARD_FIELDS = 'id,name,url';
 
 export class TrelloClient {
   private axiosInstance: AxiosInstance;
   private rateLimiter;
+  private readonly allowedBoardIds: Set<string>;
   private listBoardCache = new Map<string, string>();
   private cardBoardCache = new Map<string, string>();
+  private checklistBoardCache = new Map<string, string>();
 
   constructor(private config: TrelloConfig) {
+    this.allowedBoardIds = new Set([config.boardId, ...(config.allowedBoardIds ?? [])]);
+
     this.axiosInstance = axios.create({
       baseURL: 'https://api.trello.com/1',
       timeout: 30000,
-      maxContentLength: 5 * 1024 * 1024, // 5MB response limit
-      maxBodyLength: 1 * 1024 * 1024, // 1MB request limit
+      maxContentLength: 5 * 1024 * 1024,
+      maxBodyLength: 1 * 1024 * 1024,
       params: {
         key: config.apiKey,
         token: config.token,
@@ -38,23 +45,32 @@ export class TrelloClient {
 
     this.rateLimiter = createTrelloRateLimiters();
 
-    // Add rate limiting interceptor
-    this.axiosInstance.interceptors.request.use(async config => {
+    this.axiosInstance.interceptors.request.use(async requestConfig => {
       await this.rateLimiter.waitForAvailable();
-      return config;
+      return requestConfig;
     });
   }
 
-  private assertBoardScope(boardId: string, resourceType: string, resourceId: string): void {
-    if (boardId !== this.config.boardId) {
-      throw new Error(`${resourceType} ${resourceId} is outside the configured board scope`);
+  private getAllowedBoardIds(): string[] {
+    return [...this.allowedBoardIds];
+  }
+
+  private assertBoardAllowed(boardId: string, resourceType: string, resourceId: string): void {
+    if (!this.allowedBoardIds.has(boardId)) {
+      throw new Error(`${resourceType} ${resourceId} is outside the allowed board scope`);
     }
   }
 
-  private async assertListInConfiguredBoard(listId: string): Promise<void> {
+  private resolveBoardId(boardId?: string): string {
+    const resolvedBoardId = boardId ?? this.config.boardId;
+    this.assertBoardAllowed(resolvedBoardId, 'Board', resolvedBoardId);
+    return resolvedBoardId;
+  }
+
+  private async assertListInAllowedBoards(listId: string): Promise<void> {
     const cachedBoardId = this.listBoardCache.get(listId);
     if (cachedBoardId) {
-      this.assertBoardScope(cachedBoardId, 'List', listId);
+      this.assertBoardAllowed(cachedBoardId, 'List', listId);
       return;
     }
 
@@ -63,13 +79,13 @@ export class TrelloClient {
     });
 
     this.listBoardCache.set(listId, response.data.id);
-    this.assertBoardScope(response.data.id, 'List', listId);
+    this.assertBoardAllowed(response.data.id, 'List', listId);
   }
 
-  private async assertCardInConfiguredBoard(cardId: string): Promise<void> {
+  private async assertCardInAllowedBoards(cardId: string): Promise<void> {
     const cachedBoardId = this.cardBoardCache.get(cardId);
     if (cachedBoardId) {
-      this.assertBoardScope(cachedBoardId, 'Card', cardId);
+      this.assertBoardAllowed(cachedBoardId, 'Card', cardId);
       return;
     }
 
@@ -82,7 +98,29 @@ export class TrelloClient {
     }
 
     this.cardBoardCache.set(cardId, response.data.idBoard);
-    this.assertBoardScope(response.data.idBoard, 'Card', cardId);
+    this.assertBoardAllowed(response.data.idBoard, 'Card', cardId);
+  }
+
+  private async assertChecklistInAllowedBoards(checklistId: string): Promise<void> {
+    const cachedBoardId = this.checklistBoardCache.get(checklistId);
+    if (cachedBoardId) {
+      this.assertBoardAllowed(cachedBoardId, 'Checklist', checklistId);
+      return;
+    }
+
+    const response = await this.axiosInstance.get<Pick<TrelloChecklist, 'idBoard'>>(
+      `/checklists/${checklistId}`,
+      {
+        params: { fields: 'idBoard' },
+      }
+    );
+
+    if (!response.data.idBoard) {
+      throw new Error(`Unable to determine board scope for checklist ${checklistId}`);
+    }
+
+    this.checklistBoardCache.set(checklistId, response.data.idBoard);
+    this.assertBoardAllowed(response.data.idBoard, 'Checklist', checklistId);
   }
 
   private async handleRequest<T>(request: () => Promise<T>, attempt = 0): Promise<T> {
@@ -118,28 +156,65 @@ export class TrelloClient {
           cause: error,
         });
       }
+
       throw error;
     }
   }
 
+  private async searchBoard(
+    query: string,
+    limit: number,
+    boardId: string
+  ): Promise<TrelloSearchResults> {
+    const response = await this.axiosInstance.get<TrelloSearchResults>('/search', {
+      params: {
+        query,
+        idBoards: boardId,
+        modelTypes: 'boards,cards',
+        boards_limit: 1,
+        cards_limit: limit,
+        board_fields: BOARD_FIELDS,
+        card_fields: CARD_FIELDS,
+      },
+    });
+
+    return response.data;
+  }
+
+  async getAllowedBoards(): Promise<TrelloBoardSummary[]> {
+    return this.handleRequest(async () => {
+      const responses = await Promise.all(
+        this.getAllowedBoardIds().map(boardId =>
+          this.axiosInstance.get<TrelloBoardSummary>(`/boards/${boardId}`, {
+            params: { fields: BOARD_FIELDS },
+          })
+        )
+      );
+
+      return responses.map(response => response.data);
+    });
+  }
+
   async getCardsByList(listId: string): Promise<TrelloCard[]> {
     return this.handleRequest(async () => {
-      await this.assertListInConfiguredBoard(listId);
+      await this.assertListInAllowedBoards(listId);
       const response = await this.axiosInstance.get(`/lists/${listId}/cards`);
       return response.data;
     });
   }
 
-  async getLists(): Promise<TrelloList[]> {
+  async getLists(boardId?: string): Promise<TrelloList[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/lists`);
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.get(`/boards/${resolvedBoardId}/lists`);
       return response.data;
     });
   }
 
-  async getRecentActivity(limit: number = 10): Promise<TrelloAction[]> {
+  async getRecentActivity(limit = 10, boardId?: string): Promise<TrelloAction[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/actions`, {
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.get(`/boards/${resolvedBoardId}/actions`, {
         params: { limit },
       });
       return response.data;
@@ -154,7 +229,7 @@ export class TrelloClient {
     labels?: string[];
   }): Promise<TrelloCard> {
     return this.handleRequest(async () => {
-      await this.assertListInConfiguredBoard(params.listId);
+      await this.assertListInAllowedBoards(params.listId);
       const response = await this.axiosInstance.post('/cards', {
         idList: params.listId,
         name: params.name,
@@ -174,7 +249,7 @@ export class TrelloClient {
     labels?: string[];
   }): Promise<TrelloCard> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(params.cardId);
+      await this.assertCardInAllowedBoards(params.cardId);
       const response = await this.axiosInstance.put(`/cards/${params.cardId}`, {
         name: params.name,
         desc: params.description,
@@ -187,7 +262,7 @@ export class TrelloClient {
 
   async archiveCard(cardId: string): Promise<TrelloCard> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.put(`/cards/${cardId}`, {
         closed: true,
       });
@@ -195,11 +270,12 @@ export class TrelloClient {
     });
   }
 
-  async addList(name: string): Promise<TrelloList> {
+  async addList(name: string, boardId?: string): Promise<TrelloList> {
     return this.handleRequest(async () => {
+      const resolvedBoardId = this.resolveBoardId(boardId);
       const response = await this.axiosInstance.post('/lists', {
         name,
-        idBoard: this.config.boardId,
+        idBoard: resolvedBoardId,
       });
       return response.data;
     });
@@ -207,7 +283,7 @@ export class TrelloClient {
 
   async archiveList(listId: string): Promise<TrelloList> {
     return this.handleRequest(async () => {
-      await this.assertListInConfiguredBoard(listId);
+      await this.assertListInAllowedBoards(listId);
       const response = await this.axiosInstance.put(`/lists/${listId}/closed`, {
         value: true,
       });
@@ -215,39 +291,73 @@ export class TrelloClient {
     });
   }
 
-  async getMyCards(): Promise<TrelloCard[]> {
+  async getMyCards(boardId?: string): Promise<TrelloCard[]> {
     return this.handleRequest(async () => {
+      const resolvedBoardId = boardId ? this.resolveBoardId(boardId) : undefined;
       const response = await this.axiosInstance.get<TrelloCard[]>('/members/me/cards', {
         params: {
-          fields: 'id,name,desc,due,idBoard,idList,idLabels,closed,url,dateLastActivity',
+          fields: CARD_FIELDS,
         },
       });
 
-      return response.data.filter(card => card.idBoard === this.config.boardId);
+      return response.data.filter(card => {
+        if (!card.idBoard) {
+          return false;
+        }
+
+        if (resolvedBoardId) {
+          return card.idBoard === resolvedBoardId;
+        }
+
+        return this.allowedBoardIds.has(card.idBoard);
+      });
     });
   }
 
-  async searchAllBoards(query: string, limit: number = 10): Promise<TrelloSearchResults> {
+  async searchAllBoards(query: string, limit = 10, boardId?: string): Promise<TrelloSearchResults> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get<TrelloSearchResults>('/search', {
-        params: {
-          query,
-          idBoards: this.config.boardId,
-          modelTypes: 'boards,cards',
-          boards_limit: 1,
-          cards_limit: limit,
-          board_fields: 'id,name,url',
-          card_fields: 'id,name,desc,due,idBoard,idList,idLabels,closed,url,dateLastActivity',
-        },
+      const targetBoardIds = boardId ? [this.resolveBoardId(boardId)] : this.getAllowedBoardIds();
+
+      const responses = await Promise.all(
+        targetBoardIds.map(targetBoardId => this.searchBoard(query, limit, targetBoardId))
+      );
+
+      const boardMap = new Map<string, TrelloBoardSummary>();
+      const cards: TrelloCard[] = [];
+
+      for (const response of responses) {
+        for (const board of response.boards ?? []) {
+          if (this.allowedBoardIds.has(board.id)) {
+            boardMap.set(board.id, board);
+          }
+        }
+
+        for (const card of response.cards ?? []) {
+          if (card.idBoard && this.allowedBoardIds.has(card.idBoard)) {
+            cards.push(card);
+          }
+        }
+      }
+
+      cards.sort((left, right) => {
+        const leftTime = Date.parse(left.dateLastActivity ?? '');
+        const rightTime = Date.parse(right.dateLastActivity ?? '');
+        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
       });
-      return response.data;
+
+      return {
+        boards: targetBoardIds
+          .map(targetBoardId => boardMap.get(targetBoardId))
+          .filter((board): board is TrelloBoardSummary => board !== undefined),
+        cards: cards.slice(0, limit),
+      };
     });
   }
 
   async moveCard(cardId: string, listId: string): Promise<TrelloCard> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
-      await this.assertListInConfiguredBoard(listId);
+      await this.assertCardInAllowedBoards(cardId);
+      await this.assertListInAllowedBoards(listId);
       const response = await this.axiosInstance.put(`/cards/${cardId}`, {
         idList: listId,
       });
@@ -257,7 +367,7 @@ export class TrelloClient {
 
   async addComment(cardId: string, text: string): Promise<TrelloAction> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.post(`/cards/${cardId}/actions/comments`, {
         text,
       });
@@ -265,16 +375,18 @@ export class TrelloClient {
     });
   }
 
-  async getLabels(): Promise<TrelloLabel[]> {
+  async getLabels(boardId?: string): Promise<TrelloLabel[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/labels`);
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.get(`/boards/${resolvedBoardId}/labels`);
       return response.data;
     });
   }
 
-  async addLabel(name: string, color: string): Promise<TrelloLabel> {
+  async addLabel(name: string, color: string, boardId?: string): Promise<TrelloLabel> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.post(`/boards/${this.config.boardId}/labels`, {
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.post(`/boards/${resolvedBoardId}/labels`, {
         name,
         color,
       });
@@ -284,7 +396,7 @@ export class TrelloClient {
 
   async getChecklists(cardId: string): Promise<TrelloChecklist[]> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.get(`/cards/${cardId}/checklists`);
       return response.data;
     });
@@ -292,7 +404,7 @@ export class TrelloClient {
 
   async createChecklist(cardId: string, name: string): Promise<TrelloChecklist> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.post('/checklists', {
         idCard: cardId,
         name,
@@ -303,6 +415,7 @@ export class TrelloClient {
 
   async addCheckItem(checklistId: string, name: string): Promise<TrelloCheckItem> {
     return this.handleRequest(async () => {
+      await this.assertChecklistInAllowedBoards(checklistId);
       const response = await this.axiosInstance.post(`/checklists/${checklistId}/checkItems`, {
         name,
       });
@@ -316,7 +429,7 @@ export class TrelloClient {
     updates: { name?: string; state?: string }
   ): Promise<TrelloCheckItem> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.put(
         `/cards/${cardId}/checkItem/${checkItemId}`,
         updates
@@ -327,20 +440,22 @@ export class TrelloClient {
 
   async deleteCheckItem(checklistId: string, checkItemId: string): Promise<void> {
     return this.handleRequest(async () => {
+      await this.assertChecklistInAllowedBoards(checklistId);
       await this.axiosInstance.delete(`/checklists/${checklistId}/checkItems/${checkItemId}`);
     });
   }
 
-  async getCustomFields(): Promise<TrelloCustomField[]> {
+  async getCustomFields(boardId?: string): Promise<TrelloCustomField[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/customFields`);
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.get(`/boards/${resolvedBoardId}/customFields`);
       return response.data;
     });
   }
 
   async getCustomFieldItems(cardId: string): Promise<TrelloCustomFieldItem[]> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.get<
         TrelloCard & { customFieldItems: TrelloCustomFieldItem[] }
       >(`/cards/${cardId}`, { params: { customFieldItems: true, fields: 'id' } });
@@ -354,8 +469,7 @@ export class TrelloClient {
     body: Record<string, unknown>
   ): Promise<TrelloCustomFieldItem> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
-      // Note: Trello uses singular /card/ (not /cards/) for this endpoint
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.put(
         `/card/${cardId}/customField/${customFieldId}/item`,
         body
@@ -366,7 +480,7 @@ export class TrelloClient {
 
   async getCardAttachments(cardId: string): Promise<TrelloAttachment[]> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.get(`/cards/${cardId}/attachments`);
       return response.data;
     });
@@ -382,7 +496,7 @@ export class TrelloClient {
     error?: string;
   }> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
 
       const metadataResponse = await this.axiosInstance.get(
         `/cards/${cardId}/attachments/${attachmentId}`
@@ -442,16 +556,17 @@ export class TrelloClient {
     });
   }
 
-  async getBoardMembers(): Promise<TrelloMember[]> {
+  async getBoardMembers(boardId?: string): Promise<TrelloMember[]> {
     return this.handleRequest(async () => {
-      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/members`);
+      const resolvedBoardId = this.resolveBoardId(boardId);
+      const response = await this.axiosInstance.get(`/boards/${resolvedBoardId}/members`);
       return response.data;
     });
   }
 
   async assignCardMember(cardId: string, memberId: string): Promise<TrelloMember[]> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       const response = await this.axiosInstance.post(`/cards/${cardId}/idMembers`, {
         value: memberId,
       });
@@ -461,14 +576,14 @@ export class TrelloClient {
 
   async unassignCardMember(cardId: string, memberId: string): Promise<void> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       await this.axiosInstance.delete(`/cards/${cardId}/idMembers/${memberId}`);
     });
   }
 
   async deleteComment(cardId: string, actionId: string): Promise<void> {
     return this.handleRequest(async () => {
-      await this.assertCardInConfiguredBoard(cardId);
+      await this.assertCardInAllowedBoards(cardId);
       await this.axiosInstance.delete(`/cards/${cardId}/actions/${actionId}/comments`);
     });
   }
