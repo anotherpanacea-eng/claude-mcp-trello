@@ -89,6 +89,7 @@ const trelloGetCardsByListTool: Tool = {
     required: ['listId'],
   },
   annotations: {
+    title: 'Get Cards by List',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -104,6 +105,7 @@ const trelloGetListsTool: Tool = {
     properties: {},
   },
   annotations: {
+    title: 'Get Board Lists',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -125,6 +127,7 @@ const trelloGetRecentActivityTool: Tool = {
     },
   },
   annotations: {
+    title: 'Get Recent Activity',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -157,6 +160,7 @@ const trelloAddCardTool: Tool = {
     required: ['listId', 'name'],
   },
   annotations: {
+    title: 'Add Card',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -195,6 +199,7 @@ const trelloUpdateCardTool: Tool = {
     required: ['cardId'],
   },
   annotations: {
+    title: 'Update Card',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: true,
@@ -216,6 +221,7 @@ const trelloArchiveCardTool: Tool = {
     required: ['cardId'],
   },
   annotations: {
+    title: 'Archive Card',
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
@@ -237,6 +243,7 @@ const trelloAddListTool: Tool = {
     required: ['name'],
   },
   annotations: {
+    title: 'Add List',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -258,6 +265,7 @@ const trelloArchiveListTool: Tool = {
     required: ['listId'],
   },
   annotations: {
+    title: 'Archive List',
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
@@ -273,6 +281,7 @@ const trelloGetMyCardsTool: Tool = {
     properties: {},
   },
   annotations: {
+    title: 'Get My Cards',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -296,6 +305,7 @@ const trelloSearchAllBoardsTool: Tool = {
     required: ['query'],
   },
   annotations: {
+    title: 'Search Board',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -321,6 +331,7 @@ const trelloMoveCardTool: Tool = {
     required: ['cardId', 'listId'],
   },
   annotations: {
+    title: 'Move Card',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: true,
@@ -346,6 +357,7 @@ const trelloAddCommentTool: Tool = {
     required: ['cardId', 'text'],
   },
   annotations: {
+    title: 'Add Comment',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -361,6 +373,7 @@ const trelloGetLabelsTool: Tool = {
     properties: {},
   },
   annotations: {
+    title: 'Get Labels',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -387,6 +400,7 @@ const trelloAddLabelTool: Tool = {
     required: ['name', 'color'],
   },
   annotations: {
+    title: 'Add Label',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -408,6 +422,7 @@ const trelloGetChecklistsTool: Tool = {
     required: ['cardId'],
   },
   annotations: {
+    title: 'Get Checklists',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -433,6 +448,7 @@ const trelloCreateChecklistTool: Tool = {
     required: ['cardId', 'name'],
   },
   annotations: {
+    title: 'Create Checklist',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -458,6 +474,7 @@ const trelloAddCheckItemTool: Tool = {
     required: ['checklistId', 'name'],
   },
   annotations: {
+    title: 'Add Checklist Item',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
@@ -491,6 +508,7 @@ const trelloUpdateCheckItemTool: Tool = {
     required: ['cardId', 'checkItemId'],
   },
   annotations: {
+    title: 'Update Checklist Item',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: true,
@@ -516,6 +534,7 @@ const trelloDeleteCheckItemTool: Tool = {
     required: ['checklistId', 'checkItemId'],
   },
   annotations: {
+    title: 'Delete Checklist Item',
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
@@ -531,6 +550,7 @@ const trelloGetCustomFieldsTool: Tool = {
     properties: {},
   },
   annotations: {
+    title: 'Get Custom Fields',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -553,6 +573,7 @@ const trelloGetCustomFieldItemsTool: Tool = {
     required: ['cardId'],
   },
   annotations: {
+    title: 'Get Custom Field Values',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -592,6 +613,7 @@ const trelloSetCustomFieldTool: Tool = {
     required: ['cardId', 'customFieldId', 'type'],
   },
   annotations: {
+    title: 'Set Custom Field',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: true,
@@ -614,6 +636,7 @@ const trelloGetCardAttachmentsTool: Tool = {
     required: ['cardId'],
   },
   annotations: {
+    title: 'Get Card Attachments',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -640,6 +663,7 @@ const trelloDownloadAttachmentTool: Tool = {
     required: ['cardId', 'attachmentId'],
   },
   annotations: {
+    title: 'Download Attachment',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -655,6 +679,7 @@ const trelloGetBoardMembersTool: Tool = {
     properties: {},
   },
   annotations: {
+    title: 'Get Board Members',
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -680,6 +705,7 @@ const trelloAssignCardMemberTool: Tool = {
     required: ['cardId', 'memberId'],
   },
   annotations: {
+    title: 'Assign Card Member',
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: true,
@@ -705,6 +731,7 @@ const trelloUnassignCardMemberTool: Tool = {
     required: ['cardId', 'memberId'],
   },
   annotations: {
+    title: 'Unassign Card Member',
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
@@ -731,6 +758,7 @@ const trelloDeleteCommentTool: Tool = {
     required: ['cardId', 'actionId'],
   },
   annotations: {
+    title: 'Delete Comment',
     readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,

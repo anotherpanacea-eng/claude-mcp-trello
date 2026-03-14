@@ -159,6 +159,23 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 | `trello_search_all_boards` | Search cards on the configured board | |
 | `trello_get_recent_activity` | Get recent board activity (up to 100 actions) | |
 
+## Example Prompts
+
+Once configured, you can use natural language with Claude to interact with your Trello board:
+
+**Board overview and task management:**
+> "Show me all the lists on my board and how many cards are in each one."
+
+> "Create a card called 'Update onboarding docs' in the To Do list with a due date of next Friday, and add a checklist with three items: review current docs, draft updates, get team feedback."
+
+**Search, move, and organize:**
+> "Find all cards assigned to me that are overdue, then move any that are still in 'In Progress' to the 'Needs Review' list."
+
+> "Search for cards mentioning 'API migration' and add a comment to each one saying 'Blocked — waiting on vendor response.'"
+
+**Custom fields and members:**
+> "Show me the custom field values on the 'Q2 Planning' card, then set the Priority field to 'High' and assign it to Sarah."
+
 ## API Coverage Decisions
 
 This server covers the Trello API endpoints most useful for day-to-day board work. Several API groups were intentionally excluded:
@@ -223,6 +240,11 @@ src/
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Support
+
+- **Bug reports and feature requests**: [GitHub Issues](https://github.com/anotherpanacea-eng/claude-mcp-trello/issues)
+- **Contact**: anotherpanacea@gmail.com
 
 ## License
 
