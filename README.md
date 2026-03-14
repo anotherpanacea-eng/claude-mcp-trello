@@ -168,6 +168,18 @@ Replace paths and credentials with your actual values. Keep the Trello token nar
 - **Request Limits**: Axios timeout (30s), response size cap (5MB), and request body cap (1MB) prevent hanging or memory exhaustion.
 - **Rate Limiting**: Token bucket algorithm respects Trello's limits (300/10s per key, 100/10s per token). Requests queue automatically.
 
+## Privacy Policy
+
+This MCP server operates entirely on your local machine. It does not collect, store, or transmit any data to third parties beyond the Trello API calls you explicitly initiate.
+
+- **Authentication**: Your Trello API key and token are passed as environment variables and used solely to authenticate requests to Trello's REST API (`api.trello.com`). They are never logged, stored on disk, or sent elsewhere.
+- **Data flow**: All data flows directly between this server and Trello's API. No intermediary servers are involved.
+- **Audit logs**: Tool invocations are logged to stderr (your local terminal) with tool names, timestamps, and Trello resource IDs. No card content, comments, or credentials appear in logs.
+- **No telemetry**: This server includes no analytics, crash reporting, or usage tracking of any kind.
+- **Board scoping**: The server is restricted to a single configured board. It cannot access other boards, workspaces, or Trello accounts beyond what the provided API token permits.
+
+For Trello's own data handling, see [Atlassian's Privacy Policy](https://www.atlassian.com/legal/privacy-policy).
+
 ## Development
 
 ### Verification

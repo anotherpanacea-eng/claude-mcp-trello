@@ -88,6 +88,12 @@ const trelloGetCardsByListTool: Tool = {
     },
     required: ['listId'],
   },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetListsTool: Tool = {
@@ -96,6 +102,12 @@ const trelloGetListsTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -111,6 +123,12 @@ const trelloGetRecentActivityTool: Tool = {
         description: 'Number of activities to retrieve (default: 10)',
       },
     },
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -137,6 +155,12 @@ const trelloAddCardTool: Tool = {
       },
     },
     required: ['listId', 'name'],
+  },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
   },
 };
 
@@ -170,6 +194,12 @@ const trelloUpdateCardTool: Tool = {
     },
     required: ['cardId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloArchiveCardTool: Tool = {
@@ -184,6 +214,12 @@ const trelloArchiveCardTool: Tool = {
       },
     },
     required: ['cardId'],
+  },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -200,6 +236,12 @@ const trelloAddListTool: Tool = {
     },
     required: ['name'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  },
 };
 
 const trelloArchiveListTool: Tool = {
@@ -215,6 +257,12 @@ const trelloArchiveListTool: Tool = {
     },
     required: ['listId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetMyCardsTool: Tool = {
@@ -223,6 +271,12 @@ const trelloGetMyCardsTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -240,6 +294,12 @@ const trelloSearchAllBoardsTool: Tool = {
       },
     },
     required: ['query'],
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -260,6 +320,12 @@ const trelloMoveCardTool: Tool = {
     },
     required: ['cardId', 'listId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloAddCommentTool: Tool = {
@@ -279,6 +345,12 @@ const trelloAddCommentTool: Tool = {
     },
     required: ['cardId', 'text'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetLabelsTool: Tool = {
@@ -287,6 +359,12 @@ const trelloGetLabelsTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -308,6 +386,12 @@ const trelloAddLabelTool: Tool = {
     },
     required: ['name', 'color'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetChecklistsTool: Tool = {
@@ -322,6 +406,12 @@ const trelloGetChecklistsTool: Tool = {
       },
     },
     required: ['cardId'],
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -342,6 +432,12 @@ const trelloCreateChecklistTool: Tool = {
     },
     required: ['cardId', 'name'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  },
 };
 
 const trelloAddCheckItemTool: Tool = {
@@ -360,6 +456,12 @@ const trelloAddCheckItemTool: Tool = {
       },
     },
     required: ['checklistId', 'name'],
+  },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
   },
 };
 
@@ -388,6 +490,12 @@ const trelloUpdateCheckItemTool: Tool = {
     },
     required: ['cardId', 'checkItemId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloDeleteCheckItemTool: Tool = {
@@ -407,6 +515,12 @@ const trelloDeleteCheckItemTool: Tool = {
     },
     required: ['checklistId', 'checkItemId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetCustomFieldsTool: Tool = {
@@ -415,6 +529,12 @@ const trelloGetCustomFieldsTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -431,6 +551,12 @@ const trelloGetCustomFieldItemsTool: Tool = {
       },
     },
     required: ['cardId'],
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -465,6 +591,12 @@ const trelloSetCustomFieldTool: Tool = {
     },
     required: ['cardId', 'customFieldId', 'type'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetCardAttachmentsTool: Tool = {
@@ -480,6 +612,12 @@ const trelloGetCardAttachmentsTool: Tool = {
       },
     },
     required: ['cardId'],
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -501,6 +639,12 @@ const trelloDownloadAttachmentTool: Tool = {
     },
     required: ['cardId', 'attachmentId'],
   },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloGetBoardMembersTool: Tool = {
@@ -509,6 +653,12 @@ const trelloGetBoardMembersTool: Tool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -529,6 +679,12 @@ const trelloAssignCardMemberTool: Tool = {
     },
     required: ['cardId', 'memberId'],
   },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
 };
 
 const trelloUnassignCardMemberTool: Tool = {
@@ -547,6 +703,12 @@ const trelloUnassignCardMemberTool: Tool = {
       },
     },
     required: ['cardId', 'memberId'],
+  },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
@@ -567,6 +729,12 @@ const trelloDeleteCommentTool: Tool = {
       },
     },
     required: ['cardId', 'actionId'],
+  },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: true,
+    openWorldHint: false,
   },
 };
 
