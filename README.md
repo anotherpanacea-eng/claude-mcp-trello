@@ -6,6 +6,19 @@ A Model Context Protocol (MCP) server for interacting with Trello boards. It sta
   <img width="380" height="200" src="https://glama.ai/mcp/servers/7vcnchsm63/badge" alt="Claude Trello MCP server" />
 </a>
 
+## About This Fork
+
+This repository is a maintained fork of `hrs-asano/claude-mcp-trello`.
+
+It intentionally diverges in a few areas:
+
+- primary-board-first security model
+- optional explicit allowed-boards mode instead of unrestricted multi-board access
+- stronger server-side ownership checks for cards, lists, and checklists
+- expanded validation, tests, CI, and current Node tooling
+
+Upstream changes may be cherry-picked selectively, but this fork is maintained as its own product direction.
+
 ## Getting Your Trello Credentials
 
 You need three values: an API key, a token, and a board ID.
