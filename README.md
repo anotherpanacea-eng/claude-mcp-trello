@@ -33,7 +33,7 @@ You need three values: an API key, a token, and a board ID.
 
 ### Prerequisites
 
-- Node.js 20 or higher
+- Node.js 22 or higher
 - npm
 
 ### Build from Source
