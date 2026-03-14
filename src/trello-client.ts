@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import {
   TrelloAction,
+  TrelloAttachment,
   TrelloCard,
   TrelloConfig,
   TrelloLabel,
@@ -273,6 +274,84 @@ export class TrelloClient {
         color,
       });
       return response.data;
+    });
+  }
+
+  async getCardAttachments(cardId: string): Promise<TrelloAttachment[]> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.get(`/cards/${cardId}/attachments`);
+      return response.data;
+    });
+  }
+
+  async downloadAttachment(
+    cardId: string,
+    attachmentId: string
+  ): Promise<{
+    attachment: TrelloAttachment;
+    content: string | null;
+    url: string;
+    error?: string;
+  }> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+
+      const metadataResponse = await this.axiosInstance.get(
+        `/cards/${cardId}/attachments/${attachmentId}`
+      );
+      const attachment: TrelloAttachment = metadataResponse.data;
+
+      if (!attachment.isUpload) {
+        return {
+          attachment,
+          content: null,
+          url: attachment.url,
+        };
+      }
+
+      try {
+        const contentResponse = await axios.get(attachment.url, {
+          responseType: 'arraybuffer',
+          maxRedirects: 5,
+          timeout: 60000,
+          maxContentLength: 5 * 1024 * 1024,
+          headers: {
+            Accept: '*/*',
+            Authorization: `OAuth oauth_consumer_key="${this.config.apiKey}", oauth_token="${this.config.token}"`,
+          },
+        });
+
+        const base64Content = Buffer.from(contentResponse.data).toString('base64');
+
+        return {
+          attachment,
+          content: base64Content,
+          url: attachment.url,
+        };
+      } catch (error) {
+        let errorMessage = 'Unknown error';
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`;
+          } else if (error.code) {
+            errorMessage = `Network error: ${error.code} - ${error.message}`;
+          } else {
+            errorMessage = error.message;
+          }
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        console.error('Failed to download attachment content:', errorMessage);
+
+        return {
+          attachment,
+          content: null,
+          url: attachment.url,
+          error: `Download failed: ${errorMessage}`,
+        };
+      }
     });
   }
 }

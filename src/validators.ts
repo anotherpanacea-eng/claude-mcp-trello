@@ -241,6 +241,30 @@ export function validateAddLabelRequest(args: Record<string, unknown>): {
   };
 }
 
+export function validateGetCardAttachmentsRequest(args: Record<string, unknown>): {
+  cardId: string;
+} {
+  if (!args.cardId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId is required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+  };
+}
+
+export function validateDownloadAttachmentRequest(args: Record<string, unknown>): {
+  cardId: string;
+  attachmentId: string;
+} {
+  if (!args.cardId || !args.attachmentId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and attachmentId are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    attachmentId: validateTrelloId(args.attachmentId, 'attachmentId'),
+  };
+}
+
 export function validateSearchBoardRequest(args: Record<string, unknown>): {
   query: string;
   limit?: number;

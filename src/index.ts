@@ -16,6 +16,8 @@ import {
   validateAddListRequest,
   validateArchiveCardRequest,
   validateArchiveListRequest,
+  validateDownloadAttachmentRequest,
+  validateGetCardAttachmentsRequest,
   validateGetCardsListRequest,
   validateGetRecentActivityRequest,
   validateMoveCardRequest,
@@ -290,6 +292,42 @@ const trelloAddLabelTool: Tool = {
   },
 };
 
+const trelloGetCardAttachmentsTool: Tool = {
+  name: 'trello_get_card_attachments',
+  description:
+    'Retrieves all attachments from a card. Returns metadata including name, file size, MIME type, and URL.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to get attachments from',
+      },
+    },
+    required: ['cardId'],
+  },
+};
+
+const trelloDownloadAttachmentTool: Tool = {
+  name: 'trello_download_attachment',
+  description:
+    'Downloads a specific attachment from a card. Returns base64-encoded content for Trello uploads, or the URL for external links. Use trello_get_card_attachments first to get the attachment ID.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card containing the attachment',
+      },
+      attachmentId: {
+        type: 'string',
+        description: 'The ID of the attachment to download',
+      },
+    },
+    required: ['cardId', 'attachmentId'],
+  },
+};
+
 // --------------------------------------------------
 // Main server implementation
 // --------------------------------------------------
@@ -510,6 +548,31 @@ async function main() {
           };
         }
 
+        // --------------------------------------------------
+        // Get all attachments from a card
+        // --------------------------------------------------
+        case 'trello_get_card_attachments': {
+          const parsedArgs = validateGetCardAttachmentsRequest(args);
+          const response = await trelloClient.getCardAttachments(parsedArgs.cardId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Download a specific attachment from a card
+        // --------------------------------------------------
+        case 'trello_download_attachment': {
+          const parsedArgs = validateDownloadAttachmentRequest(args);
+          const response = await trelloClient.downloadAttachment(
+            parsedArgs.cardId,
+            parsedArgs.attachmentId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -548,6 +611,8 @@ async function main() {
       trelloAddCommentTool,
       trelloGetLabelsTool,
       trelloAddLabelTool,
+      trelloGetCardAttachmentsTool,
+      trelloDownloadAttachmentTool,
     ];
 
     return {
