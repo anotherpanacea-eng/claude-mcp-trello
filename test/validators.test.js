@@ -19,11 +19,11 @@ test('validateObject rejects non-object arguments', () => {
 
 test('validateAddCardRequest trims required strings', () => {
   const result = validateAddCardRequest({
-    listId: '  list-123  ',
+    listId: '  507f1f77bcf86cd799439011  ',
     name: '  Example card  ',
   });
 
-  assert.equal(result.listId, 'list-123');
+  assert.equal(result.listId, '507f1f77bcf86cd799439011');
   assert.equal(result.name, 'Example card');
 });
 
