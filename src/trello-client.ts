@@ -3,6 +3,8 @@ import {
   TrelloAction,
   TrelloAttachment,
   TrelloCard,
+  TrelloCheckItem,
+  TrelloChecklist,
   TrelloConfig,
   TrelloLabel,
   TrelloList,
@@ -274,6 +276,57 @@ export class TrelloClient {
         color,
       });
       return response.data;
+    });
+  }
+
+  async getChecklists(cardId: string): Promise<TrelloChecklist[]> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.get(`/cards/${cardId}/checklists`);
+      return response.data;
+    });
+  }
+
+  async createChecklist(cardId: string, name: string): Promise<TrelloChecklist> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.post('/checklists', {
+        idCard: cardId,
+        name,
+      });
+      return response.data;
+    });
+  }
+
+  async addCheckItem(checklistId: string, name: string): Promise<TrelloCheckItem> {
+    return this.handleRequest(async () => {
+      const response = await this.axiosInstance.post(`/checklists/${checklistId}/checkItems`, {
+        name,
+      });
+      return response.data;
+    });
+  }
+
+  async updateCheckItem(
+    cardId: string,
+    checkItemId: string,
+    updates: { name?: string; state?: string }
+  ): Promise<TrelloCheckItem> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.put(
+        `/cards/${cardId}/checkItem/${checkItemId}`,
+        updates
+      );
+      return response.data;
+    });
+  }
+
+  async deleteCheckItem(checklistId: string, checkItemId: string): Promise<void> {
+    return this.handleRequest(async () => {
+      await this.axiosInstance.delete(
+        `/checklists/${checklistId}/checkItems/${checkItemId}`
+      );
     });
   }
 

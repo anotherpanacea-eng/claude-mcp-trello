@@ -76,6 +76,23 @@ export interface TrelloMember {
   avatarUrl: string | null;
 }
 
+export interface TrelloChecklist {
+  id: string;
+  name: string;
+  idBoard: string;
+  idCard: string;
+  pos: number;
+  checkItems: TrelloCheckItem[];
+}
+
+export interface TrelloCheckItem {
+  id: string;
+  name: string;
+  state: 'complete' | 'incomplete';
+  pos: number;
+  idChecklist: string;
+}
+
 export interface TrelloAttachment {
   id: string;
   name: string;

@@ -241,6 +241,77 @@ export function validateAddLabelRequest(args: Record<string, unknown>): {
   };
 }
 
+export function validateGetChecklistsRequest(args: Record<string, unknown>): {
+  cardId: string;
+} {
+  if (!args.cardId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId is required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+  };
+}
+
+export function validateCreateChecklistRequest(args: Record<string, unknown>): {
+  cardId: string;
+  name: string;
+} {
+  if (!args.cardId || !args.name) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and name are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    name: validateNonEmptyString(args.name, 'name'),
+  };
+}
+
+export function validateAddCheckItemRequest(args: Record<string, unknown>): {
+  checklistId: string;
+  name: string;
+} {
+  if (!args.checklistId || !args.name) {
+    throw new McpError(ErrorCode.InvalidParams, 'checklistId and name are required');
+  }
+  return {
+    checklistId: validateTrelloId(args.checklistId, 'checklistId'),
+    name: validateNonEmptyString(args.name, 'name'),
+  };
+}
+
+export function validateUpdateCheckItemRequest(args: Record<string, unknown>): {
+  cardId: string;
+  checkItemId: string;
+  name?: string;
+  state?: string;
+} {
+  if (!args.cardId || !args.checkItemId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and checkItemId are required');
+  }
+  const state = validateOptionalString(args.state);
+  if (state !== undefined && state !== 'complete' && state !== 'incomplete') {
+    throw new McpError(ErrorCode.InvalidParams, 'state must be "complete" or "incomplete"');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    checkItemId: validateTrelloId(args.checkItemId, 'checkItemId'),
+    name: validateOptionalString(args.name),
+    state,
+  };
+}
+
+export function validateDeleteCheckItemRequest(args: Record<string, unknown>): {
+  checklistId: string;
+  checkItemId: string;
+} {
+  if (!args.checklistId || !args.checkItemId) {
+    throw new McpError(ErrorCode.InvalidParams, 'checklistId and checkItemId are required');
+  }
+  return {
+    checklistId: validateTrelloId(args.checklistId, 'checklistId'),
+    checkItemId: validateTrelloId(args.checkItemId, 'checkItemId'),
+  };
+}
+
 export function validateGetCardAttachmentsRequest(args: Record<string, unknown>): {
   cardId: string;
 } {

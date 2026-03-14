@@ -11,20 +11,25 @@ import {
 import { TrelloClient } from './trello-client.js';
 import {
   validateAddCardRequest,
+  validateAddCheckItemRequest,
   validateAddCommentRequest,
   validateAddLabelRequest,
   validateAddListRequest,
   validateArchiveCardRequest,
   validateArchiveListRequest,
+  validateCreateChecklistRequest,
+  validateDeleteCheckItemRequest,
   validateDownloadAttachmentRequest,
   validateGetCardAttachmentsRequest,
   validateGetCardsListRequest,
+  validateGetChecklistsRequest,
   validateGetRecentActivityRequest,
   validateMoveCardRequest,
   validateObject,
   validateSearchBoardRequest,
   validateTrelloId,
   validateUpdateCardRequest,
+  validateUpdateCheckItemRequest,
 } from './validators.js';
 
 const DEFAULT_ACTIVITY_LIMIT = 10;
@@ -39,6 +44,10 @@ const WRITE_TOOLS = new Set([
   'trello_move_card',
   'trello_add_comment',
   'trello_add_label',
+  'trello_create_checklist',
+  'trello_add_check_item',
+  'trello_update_check_item',
+  'trello_delete_check_item',
 ]);
 
 function getErrorMessage(error: unknown): string {
@@ -289,6 +298,106 @@ const trelloAddLabelTool: Tool = {
       },
     },
     required: ['name', 'color'],
+  },
+};
+
+const trelloGetChecklistsTool: Tool = {
+  name: 'trello_get_checklists',
+  description: 'Retrieves all checklists on a card, including their items and completion states.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to get checklists from',
+      },
+    },
+    required: ['cardId'],
+  },
+};
+
+const trelloCreateChecklistTool: Tool = {
+  name: 'trello_create_checklist',
+  description: 'Creates a new checklist on a card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card to add the checklist to',
+      },
+      name: {
+        type: 'string',
+        description: 'The name of the checklist',
+      },
+    },
+    required: ['cardId', 'name'],
+  },
+};
+
+const trelloAddCheckItemTool: Tool = {
+  name: 'trello_add_check_item',
+  description: 'Adds an item to a checklist.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      checklistId: {
+        type: 'string',
+        description: 'The ID of the checklist to add the item to',
+      },
+      name: {
+        type: 'string',
+        description: 'The text of the checklist item',
+      },
+    },
+    required: ['checklistId', 'name'],
+  },
+};
+
+const trelloUpdateCheckItemTool: Tool = {
+  name: 'trello_update_check_item',
+  description:
+    'Updates a checklist item — change its name, or mark it as complete/incomplete.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card containing the checklist item',
+      },
+      checkItemId: {
+        type: 'string',
+        description: 'The ID of the checklist item to update',
+      },
+      name: {
+        type: 'string',
+        description: 'New name for the item (optional)',
+      },
+      state: {
+        type: 'string',
+        description: 'New state: "complete" or "incomplete" (optional)',
+      },
+    },
+    required: ['cardId', 'checkItemId'],
+  },
+};
+
+const trelloDeleteCheckItemTool: Tool = {
+  name: 'trello_delete_check_item',
+  description: 'Deletes an item from a checklist.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      checklistId: {
+        type: 'string',
+        description: 'The ID of the checklist containing the item',
+      },
+      checkItemId: {
+        type: 'string',
+        description: 'The ID of the checklist item to delete',
+      },
+    },
+    required: ['checklistId', 'checkItemId'],
   },
 };
 
@@ -549,6 +658,68 @@ async function main() {
         }
 
         // --------------------------------------------------
+        // Get checklists on a card
+        // --------------------------------------------------
+        case 'trello_get_checklists': {
+          const parsedArgs = validateGetChecklistsRequest(args);
+          const response = await trelloClient.getChecklists(parsedArgs.cardId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Create a checklist on a card
+        // --------------------------------------------------
+        case 'trello_create_checklist': {
+          const parsedArgs = validateCreateChecklistRequest(args);
+          const response = await trelloClient.createChecklist(parsedArgs.cardId, parsedArgs.name);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Add an item to a checklist
+        // --------------------------------------------------
+        case 'trello_add_check_item': {
+          const parsedArgs = validateAddCheckItemRequest(args);
+          const response = await trelloClient.addCheckItem(
+            parsedArgs.checklistId,
+            parsedArgs.name
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Update a checklist item (name or state)
+        // --------------------------------------------------
+        case 'trello_update_check_item': {
+          const parsedArgs = validateUpdateCheckItemRequest(args);
+          const response = await trelloClient.updateCheckItem(
+            parsedArgs.cardId,
+            parsedArgs.checkItemId,
+            { name: parsedArgs.name, state: parsedArgs.state }
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Delete a checklist item
+        // --------------------------------------------------
+        case 'trello_delete_check_item': {
+          const parsedArgs = validateDeleteCheckItemRequest(args);
+          await trelloClient.deleteCheckItem(parsedArgs.checklistId, parsedArgs.checkItemId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success: true }) }],
+          };
+        }
+
+        // --------------------------------------------------
         // Get all attachments from a card
         // --------------------------------------------------
         case 'trello_get_card_attachments': {
@@ -611,6 +782,11 @@ async function main() {
       trelloAddCommentTool,
       trelloGetLabelsTool,
       trelloAddLabelTool,
+      trelloGetChecklistsTool,
+      trelloCreateChecklistTool,
+      trelloAddCheckItemTool,
+      trelloUpdateCheckItemTool,
+      trelloDeleteCheckItemTool,
       trelloGetCardAttachmentsTool,
       trelloDownloadAttachmentTool,
     ];
