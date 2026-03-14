@@ -398,3 +398,42 @@ export function validateSearchBoardRequest(args: Record<string, unknown>): {
     limit: validateOptionalPositiveInteger(args.limit, 'limit', MAX_SEARCH_LIMIT),
   };
 }
+
+export function validateAssignCardMemberRequest(args: Record<string, unknown>): {
+  cardId: string;
+  memberId: string;
+} {
+  if (!args.cardId || !args.memberId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and memberId are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    memberId: validateTrelloId(args.memberId, 'memberId'),
+  };
+}
+
+export function validateUnassignCardMemberRequest(args: Record<string, unknown>): {
+  cardId: string;
+  memberId: string;
+} {
+  if (!args.cardId || !args.memberId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and memberId are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    memberId: validateTrelloId(args.memberId, 'memberId'),
+  };
+}
+
+export function validateDeleteCommentRequest(args: Record<string, unknown>): {
+  cardId: string;
+  actionId: string;
+} {
+  if (!args.cardId || !args.actionId) {
+    throw new McpError(ErrorCode.InvalidParams, 'cardId and actionId are required');
+  }
+  return {
+    cardId: validateTrelloId(args.cardId, 'cardId'),
+    actionId: validateTrelloId(args.actionId, 'actionId'),
+  };
+}

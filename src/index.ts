@@ -17,8 +17,10 @@ import {
   validateAddListRequest,
   validateArchiveCardRequest,
   validateArchiveListRequest,
+  validateAssignCardMemberRequest,
   validateCreateChecklistRequest,
   validateDeleteCheckItemRequest,
+  validateDeleteCommentRequest,
   validateDownloadAttachmentRequest,
   validateGetCardAttachmentsRequest,
   validateGetCardsListRequest,
@@ -30,6 +32,7 @@ import {
   validateObject,
   validateSearchBoardRequest,
   validateTrelloId,
+  validateUnassignCardMemberRequest,
   validateUpdateCardRequest,
   validateUpdateCheckItemRequest,
 } from './validators.js';
@@ -51,6 +54,9 @@ const WRITE_TOOLS = new Set([
   'trello_update_check_item',
   'trello_delete_check_item',
   'trello_set_custom_field',
+  'trello_assign_card_member',
+  'trello_unassign_card_member',
+  'trello_delete_comment',
 ]);
 
 function getErrorMessage(error: unknown): string {
@@ -59,7 +65,7 @@ function getErrorMessage(error: unknown): string {
 
 function auditLog(toolName: string, args: Record<string, unknown>): void {
   const idFields: Record<string, unknown> = {};
-  for (const key of ['listId', 'cardId', 'boardId']) {
+  for (const key of ['listId', 'cardId', 'boardId', 'memberId', 'actionId']) {
     if (args[key] !== undefined) idFields[key] = args[key];
   }
   const idSummary = Object.keys(idFields).length > 0 ? ` ${JSON.stringify(idFields)}` : '';
@@ -498,6 +504,73 @@ const trelloDownloadAttachmentTool: Tool = {
   },
 };
 
+const trelloGetBoardMembersTool: Tool = {
+  name: 'trello_get_board_members',
+  description: 'Retrieves all members of the board. Use to find member IDs for card assignment.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+const trelloAssignCardMemberTool: Tool = {
+  name: 'trello_assign_card_member',
+  description: 'Assigns a member to a card. Use trello_get_board_members to find the member ID.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card',
+      },
+      memberId: {
+        type: 'string',
+        description: 'The ID of the member to assign',
+      },
+    },
+    required: ['cardId', 'memberId'],
+  },
+};
+
+const trelloUnassignCardMemberTool: Tool = {
+  name: 'trello_unassign_card_member',
+  description: 'Removes a member from a card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card',
+      },
+      memberId: {
+        type: 'string',
+        description: 'The ID of the member to remove',
+      },
+    },
+    required: ['cardId', 'memberId'],
+  },
+};
+
+const trelloDeleteCommentTool: Tool = {
+  name: 'trello_delete_comment',
+  description:
+    'Deletes a comment from a card. The actionId is the ID of the comment action, obtainable from trello_get_recent_activity.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cardId: {
+        type: 'string',
+        description: 'The ID of the card containing the comment',
+      },
+      actionId: {
+        type: 'string',
+        description: 'The ID of the comment action to delete',
+      },
+    },
+    required: ['cardId', 'actionId'],
+  },
+};
+
 // --------------------------------------------------
 // Main server implementation
 // --------------------------------------------------
@@ -853,6 +926,52 @@ async function main() {
           };
         }
 
+        // --------------------------------------------------
+        // Get board members
+        // --------------------------------------------------
+        case 'trello_get_board_members': {
+          const response = await trelloClient.getBoardMembers();
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Assign a member to a card
+        // --------------------------------------------------
+        case 'trello_assign_card_member': {
+          const parsedArgs = validateAssignCardMemberRequest(args);
+          const response = await trelloClient.assignCardMember(
+            parsedArgs.cardId,
+            parsedArgs.memberId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Unassign a member from a card
+        // --------------------------------------------------
+        case 'trello_unassign_card_member': {
+          const parsedArgs = validateUnassignCardMemberRequest(args);
+          await trelloClient.unassignCardMember(parsedArgs.cardId, parsedArgs.memberId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success: true }) }],
+          };
+        }
+
+        // --------------------------------------------------
+        // Delete a comment from a card
+        // --------------------------------------------------
+        case 'trello_delete_comment': {
+          const parsedArgs = validateDeleteCommentRequest(args);
+          await trelloClient.deleteComment(parsedArgs.cardId, parsedArgs.actionId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success: true }) }],
+          };
+        }
+
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -901,6 +1020,10 @@ async function main() {
       trelloSetCustomFieldTool,
       trelloGetCardAttachmentsTool,
       trelloDownloadAttachmentTool,
+      trelloGetBoardMembersTool,
+      trelloAssignCardMemberTool,
+      trelloUnassignCardMemberTool,
+      trelloDeleteCommentTool,
     ];
 
     return {

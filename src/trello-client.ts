@@ -10,6 +10,7 @@ import {
   TrelloCustomFieldItem,
   TrelloLabel,
   TrelloList,
+  TrelloMember,
   TrelloSearchResults,
 } from './types.js';
 import { createTrelloRateLimiters } from './rate-limiter.js';
@@ -443,6 +444,37 @@ export class TrelloClient {
           error: `Download failed: ${errorMessage}`,
         };
       }
+    });
+  }
+
+  async getBoardMembers(): Promise<TrelloMember[]> {
+    return this.handleRequest(async () => {
+      const response = await this.axiosInstance.get(`/boards/${this.config.boardId}/members`);
+      return response.data;
+    });
+  }
+
+  async assignCardMember(cardId: string, memberId: string): Promise<TrelloMember[]> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      const response = await this.axiosInstance.post(`/cards/${cardId}/idMembers`, {
+        value: memberId,
+      });
+      return response.data;
+    });
+  }
+
+  async unassignCardMember(cardId: string, memberId: string): Promise<void> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      await this.axiosInstance.delete(`/cards/${cardId}/idMembers/${memberId}`);
+    });
+  }
+
+  async deleteComment(cardId: string, actionId: string): Promise<void> {
+    return this.handleRequest(async () => {
+      await this.assertCardInConfiguredBoard(cardId);
+      await this.axiosInstance.delete(`/cards/${cardId}/actions/${actionId}/comments`);
     });
   }
 }
