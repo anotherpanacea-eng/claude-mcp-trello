@@ -244,7 +244,7 @@ This MCP server operates entirely on your local machine. It does not collect, st
 
 - **Authentication**: Your Trello API key and token are passed as environment variables and used solely to authenticate requests to Trello's REST API (`api.trello.com`). They are never logged, stored on disk, or sent elsewhere.
 - **Data flow**: All data flows directly between this server and Trello's API. No intermediary servers are involved.
-- **Audit logs**: Tool invocations are logged to stderr (your local terminal) with tool names, timestamps, and Trello resource IDs. No card content, comments, or credentials appear in logs.
+- **Audit logs**: Tool invocations are logged to stderr (your local terminal) with tool names, timestamps, and Trello resource IDs only. When a request fails, the error line repeats Trello's own error message. Credentials are never logged.
 - **No telemetry**: This server includes no analytics, crash reporting, or usage tracking of any kind.
 - **Board scoping**: The server is restricted to the primary configured board plus any extra board IDs you explicitly allow. It cannot roam across the rest of your Trello workspace automatically.
 
